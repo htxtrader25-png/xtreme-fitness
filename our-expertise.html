@@ -475,10 +475,10 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
         <div class="hp-live"><i></i> Live monitoring</div>
       </div>
       <div class="hp-metrics">
-        <div class="hp-metric"><div class="v up" data-count="99.2" data-dec="1">0<span class="u">%</span></div><div class="l">Uptime, monitored assets</div></div>
-        <div class="hp-metric"><div class="v" data-count="1.4" data-dec="1" data-pre="$"><span class="u"></span>0<span class="u">M</span></div><div class="l">Avg. annualized savings</div></div>
-        <div class="hp-metric"><div class="v" data-count="63">0</div><div class="l">Assets under program</div></div>
-        <div class="hp-metric"><div class="v up" data-count="41" data-suf="%">0</div><div class="l">Corrosion rate reduction</div></div>
+        <div class="hp-metric"><div class="v up"><span data-count="99.2" data-dec="1">0</span><span class="u">%</span></div><div class="l">Uptime, monitored assets</div></div>
+        <div class="hp-metric"><div class="v"><span class="u">$</span><span data-count="1.4" data-dec="1">0</span><span class="u">M</span></div><div class="l">Avg. annualized savings</div></div>
+        <div class="hp-metric"><div class="v"><span data-count="63">0</span></div><div class="l">Assets under program</div></div>
+        <div class="hp-metric"><div class="v up"><span data-count="41">0</span><span class="u">%</span></div><div class="l">Corrosion rate reduction</div></div>
       </div>
       <div class="hp-chart">
         <svg viewBox="0 0 320 74" preserveAspectRatio="none" aria-hidden="true">
@@ -1011,15 +1011,27 @@ function animateCount(el){
   }
   requestAnimationFrame(frame);
 }
+const counterEls=[...document.querySelectorAll('[data-count]')];
+function runCount(el){
+  if(el.dataset.done)return;
+  el.dataset.done='1';
+  animateCount(el);
+}
 const countIO=new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{if(e.isIntersecting){
-    const el=e.target;
-    // for composed KPI (span holds number)
-    if(el.dataset.count!==undefined){animateCount(el);}
-    countIO.unobserve(el);
-  }});
-},{threshold:.5});
-document.querySelectorAll('[data-count]').forEach(el=>countIO.observe(el));
+  entries.forEach(e=>{if(e.isIntersecting){runCount(e.target);countIO.unobserve(e.target);}});
+},{threshold:.2,rootMargin:'0px 0px -10% 0px'});
+counterEls.forEach(el=>countIO.observe(el));
+/* fallback: any counter already/ended up in view but skipped by fast scroll */
+function sweepCounters(){
+  counterEls.forEach(el=>{
+    if(el.dataset.done)return;
+    const r=el.getBoundingClientRect();
+    if(r.top<window.innerHeight*0.9 && r.bottom>0){runCount(el);countIO.unobserve(el);}
+  });
+}
+window.addEventListener('scroll',sweepCounters,{passive:true});
+window.addEventListener('load',sweepCounters);
+sweepCounters();
 
 /* ============ PROCESS FILL ============ */
 const proc=document.getElementById('proc');
