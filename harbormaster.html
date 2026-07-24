@@ -241,7 +241,7 @@ table.tbl.click tr{cursor:pointer}
 .lane-head .bs{font-size:9px; color:var(--txt-3); display:flex; align-items:center; gap:5px}
 .lane-track{flex:1; position:relative}
 .lane-track .gl{position:absolute; top:0; bottom:0; width:1px; background:var(--line-soft)}
-.blk{position:absolute; top:6px; height:44px; border-radius:6px; padding:4px 8px; overflow:hidden; cursor:grab; user-select:none; border:1px solid rgba(255,255,255,.14); box-shadow:0 3px 10px rgba(0,0,0,.35); transition:box-shadow .12s, filter .12s; z-index:2}
+.blk{position:absolute; top:6px; height:44px; border-radius:6px; padding:4px 8px; overflow:hidden; cursor:grab; user-select:none; touch-action:none; border:1px solid rgba(255,255,255,.14); box-shadow:0 3px 10px rgba(0,0,0,.35); transition:box-shadow .12s, filter .12s; z-index:2}
 .blk:hover{filter:brightness(1.1); box-shadow:0 6px 18px rgba(0,0,0,.5); z-index:4}
 .blk.dragging{opacity:.85; cursor:grabbing; z-index:20; box-shadow:0 12px 30px rgba(0,0,0,.6)}
 .blk.locked{cursor:not-allowed}
@@ -296,9 +296,85 @@ table.tbl.click tr{cursor:pointer}
 a{color:var(--accent); text-decoration:none}
 .hidden{display:none!important}
 
+/* ---------- Responsive: laptop / small desktop ---------- */
+@media (max-width:1200px){
+  .top-kpis .tk:nth-child(n+4){display:none}
+}
 @media (max-width:920px){
   .brand span,.top-kpis{display:none}
   :root{--w-rail:54px}
+  /* wrap dense KPI/stat rows so they never overflow on tablets */
+  #execKpis{grid-template-columns:repeat(3,1fr)!important}
+  #invDims{grid-template-columns:repeat(3,1fr)!important}
+}
+
+/* ---------- Responsive: tablet portrait ---------- */
+@media (max-width:820px){
+  #execKpis,#invDims{grid-template-columns:repeat(2,1fr)!important}
+  .view .grid[style*="repeat(6"],.view .grid[style*="repeat(5"],.view .grid[style*="repeat(4"]{grid-template-columns:repeat(2,1fr)!important}
+  .view .grid[style*="repeat(3"]{grid-template-columns:repeat(2,1fr)!important}
+}
+
+/* ---------- Responsive: phones ---------- */
+@media (max-width:640px){
+  :root{--h-top:48px;--h-status:0px}
+  /* single-column app with a bottom tab bar instead of a side rail */
+  #app{grid-template-columns:1fr; grid-template-rows:var(--h-top) 1fr auto; grid-template-areas:"top" "main" "rail"}
+  #statusbar{display:none}
+
+  /* top bar: compact — icon-only search, hide clock & role text */
+  #topbar{gap:8px; padding:0 10px}
+  .cmd-lbl{display:none}
+  .cmdbtn{padding:7px 10px}
+  .clock{display:none}
+  .role-pill{padding:4px; border:none; background:transparent}
+  .role-pill .who{display:none}
+  .brand{padding-right:8px}
+  .brand b{font-size:12.5px}
+
+  /* rail -> horizontal, scrollable bottom navigation */
+  #rail{
+    flex-direction:row; width:100%; height:auto; gap:2px; padding:5px 8px calc(5px + env(safe-area-inset-bottom));
+    border-right:none; border-top:1px solid var(--line); overflow-x:auto; overflow-y:hidden;
+    background:linear-gradient(0deg,var(--panel),var(--bg-1));
+  }
+  #rail::-webkit-scrollbar{height:0}
+  .nav-item{width:auto; min-width:52px; height:42px; padding:0 8px; flex:none}
+  .nav-item .lbl{font-size:8px}
+  .nav-item.active::before{left:8px; right:8px; top:auto; bottom:-5px; width:auto; height:3px}
+  .nav-item .cnt{top:1px; right:6px}
+  .nav-sep{width:1px; height:26px; margin:0 3px}
+
+  /* stack every content grid; let panels scroll their own wide tables */
+  .view{padding:10px}
+  .view .grid{grid-template-columns:1fr!important; height:auto!important}
+  .panel-b{overflow-x:auto}
+  .view-head h1{font-size:16px}
+  .view-head{gap:8px}
+
+  /* fleet board map gets a sensible height when stacked */
+  #view-fleet .map-wrap{min-height:340px}
+
+  /* scheduler: tighter lane labels, momentum scroll */
+  .sched-scroll{-webkit-overflow-scrolling:touch}
+  .lane-head,.sched-timehead .corner{width:112px}
+  .sched-toolbar{gap:6px}
+
+  /* toasts sit above the bottom nav, never wider than the screen */
+  #toasts{right:10px; left:10px; bottom:64px; max-width:none}
+
+  /* full-height side surfaces */
+  #copilot,.drawer{width:100vw}
+
+  /* larger tap targets */
+  .btn,.chip{min-height:30px}
+  .seg button{padding:7px 12px}
+}
+
+/* respect reduced-motion */
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important; animation-iteration-count:1!important}
+  .sb-tick .track{animation:none}
 }
 </style>
 </head>
@@ -312,7 +388,7 @@ a{color:var(--accent); text-decoration:none}
     </div>
     <div class="top-kpis" id="topKpis"></div>
     <div class="top-spacer"></div>
-    <button class="cmdbtn" onclick="Palette.open()">🔍 Search / Command <kbd>⌘K</kbd></button>
+    <button class="cmdbtn" onclick="Palette.open()">🔍 <span class="cmd-lbl">Search / Command <kbd>⌘K</kbd></span></button>
     <div class="clock"><div class="t" id="clkT">--:--:--</div><div class="d" id="clkD">HOUSTON • CDT</div></div>
     <button class="icon-btn" title="Alerts" onclick="showAlerts()">🔔<span class="badge-dot" id="alertDot"></span></button>
     <button class="icon-btn" title="AI Copilot" onclick="Copilot.toggle()" style="color:var(--accent)">✦</button>
@@ -1593,6 +1669,9 @@ document.addEventListener('keydown',e=>{
   if(e.key.toLowerCase()==='c')Copilot.toggle();
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){if(state.view==='sched'){e.preventDefault();schedUndo();}}
 });
+
+/* redraw current view (re-fits canvases & scheduler track) on resize/rotate */
+let _rzT; window.addEventListener('resize',()=>{clearTimeout(_rzT);_rzT=setTimeout(()=>go(state.view),250);});
 
 /* ===================== GO LIVE ===================== */
 boot();
