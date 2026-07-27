@@ -338,6 +338,10 @@ section{position:relative;}
 .lead-quote{border-left:3px solid var(--accent);padding:4px 0 4px 20px;margin:24px 0;font-family:'Space Grotesk';font-size:1.14rem;font-weight:500;color:var(--ink);font-style:italic;line-height:1.4;}
 .lead-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;}
 .lead-chips .chip{font-size:.78rem;font-weight:500;color:var(--slate);background:var(--bg-2);border:1px solid var(--line);padding:6px 13px;border-radius:100px;}
+.lead-stats{display:flex;gap:30px;flex-wrap:wrap;margin:24px 0 4px;padding:20px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+.lead-stats .s .n{font-family:'Space Grotesk';font-size:1.7rem;font-weight:600;color:var(--ink);letter-spacing:-.02em;}
+.lead-stats .s .n .suf{color:var(--accent);}
+.lead-stats .s .t{font-size:.8rem;color:var(--slate-2);margin-top:3px;}
 
 /* ─────────── CTA ─────────── */
 .cta{background:var(--ink);color:#fff;border-radius:0;position:relative;overflow:hidden;}
@@ -492,7 +496,7 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
       <div class="hp-metrics">
         <div class="hp-metric"><div class="v up"><span class="u">≤</span><span data-count="1">0</span><span class="u"> PTB</span></div><div class="l">Salt content, to spec</div></div>
         <div class="hp-metric"><div class="v up"><span class="u">+</span><span data-count="12">0</span><span class="u">%</span></div><div class="l">Throughput recovered</div></div>
-        <div class="hp-metric"><div class="v"><span data-count="30">0</span><span class="u">+</span></div><div class="l">Years of experience</div></div>
+        <div class="hp-metric"><div class="v"><span data-count="34">0</span><span class="u">+</span></div><div class="l">Years of experience</div></div>
         <div class="hp-metric"><div class="v up"><span data-count="6.4" data-dec="1">0</span><span class="u">×</span></div><div class="l">Representative ROI</div></div>
       </div>
       <div class="hp-chart">
@@ -715,7 +719,7 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
       </div>
       <div class="kpi-card reveal" data-d="1">
         <div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
-        <div class="kpi-num"><span data-count="30">0</span><span class="suf">+</span></div>
+        <div class="kpi-num"><span data-count="34">0</span><span class="suf">+</span></div>
         <div class="kpi-label">Years of Experience</div>
         <div class="kpi-sub">International crude-processing engineering leadership.</div>
       </div>
@@ -806,7 +810,7 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
     <div class="why-wrap">
       <div class="why-list">
         <div class="why-item reveal"><div class="why-n">01</div><div><h3>Truly Independent</h3><p>We are advisers, not an equipment supplier. Recommendations follow the engineering evidence, never a product line — so your interests and ours stay aligned.</p></div></div>
-        <div class="why-item reveal" data-d="1"><div class="why-n">02</div><div><h3>30+ Years of Field Expertise</h3><p>Led by founder Francisco E. Vera and senior engineers with decades of international experience in crude oil processing and electrostatic systems.</p></div></div>
+        <div class="why-item reveal" data-d="1"><div class="why-n">02</div><div><h3>34 Years of Field Expertise</h3><p>Led by founder Francisco E. Vera — 34 years in oil &amp; gas, 18 of them at SLB, and a PMP®-certified record of international project execution.</p></div></div>
         <div class="why-item reveal" data-d="2"><div class="why-n">03</div><div><h3>Specialized Electrostatic Expertise</h3><p>Deep, hard-to-find engineering expertise in dehydration and desalting systems, across upstream and downstream crude processing.</p></div></div>
         <div class="why-item reveal" data-d="3"><div class="why-n">04</div><div><h3>Practical, Data-Driven Recommendations</h3><p>Backed by field data and defensible root-cause analysis, and engineered to be implementable — tangible outcomes, not theoretical studies.</p></div></div>
         <div class="why-item reveal" data-d="4"><div class="why-n">05</div><div><h3>Measurable Risk Reduction</h3><p>We set a baseline, define the KPI, and prove value in your numbers — lowering both technical and execution risk.</p></div></div>
@@ -816,7 +820,7 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
         <span class="eyebrow">By the numbers</span>
         <h3>Independence you can measure.</h3>
         <div class="why-stats">
-          <div class="why-stat"><div class="n"><span data-count="30" data-suf="+">0</span></div><div class="t">Years of international experience</div></div>
+          <div class="why-stat"><div class="n"><span data-count="34" data-suf="+">0</span></div><div class="t">Years of international experience</div></div>
           <div class="why-stat"><div class="n"><span data-count="100" data-suf="%">0</span></div><div class="t">Independent &amp; vendor-agnostic</div></div>
           <div class="why-stat"><div class="n"><span data-count="6.4" data-dec="1" data-suf="×">0</span></div><div class="t">Representative program ROI</div></div>
           <div class="why-stat"><div class="n"><span data-count="24" data-suf="/7">0</span></div><div class="t">Engagement support</div></div>
@@ -835,16 +839,22 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
     </div>
     <div class="lead-body reveal" data-d="1">
       <span class="divider-num">09 — Leadership</span>
-      <h2>Three decades of crude processing expertise.</h2>
-      <div class="lead-role">Francisco E. Vera — Founder &amp; CEO</div>
-      <p>Oil Technologies &amp; Solutions was founded by Francisco E. Vera, an engineering professional with more than 30 years of international experience in crude oil processing, electrostatic dehydration and desalting systems, project execution, and technical consulting.</p>
-      <p>He built the firm as a truly independent advisor — supporting engineering decisions with practical, experience-driven solutions that reduce operational risk and improve asset performance, free of any equipment or vendor bias.</p>
+      <h2>34 years of crude oil processing expertise.</h2>
+      <div class="lead-role">Francisco E. Vera — Founder &amp; CEO · PMP®</div>
+      <p>Francisco brings 34 years in the oil &amp; gas industry, with roles at PDVSA (Corpoven), PECOM Energy, and Petro Equipos de Venezuela — spanning crude oil dehydration and desalting, technology evaluation, and the development of oilfield infrastructure and services.</p>
+      <p>He spent 18 years with SLB — through the Natco, Cameron, and Schlumberger acquisitions — as a subject-matter expert in electrostatic dehydration–desalting, production-facilities design, and operation and optimization across onshore, offshore, and refinery domains, with a focus on new product and technology development.</p>
+      <div class="lead-stats reveal">
+        <div class="s"><div class="n"><span data-count="34">0</span></div><div class="t">Years in oil &amp; gas</div></div>
+        <div class="s"><div class="n"><span data-count="18">0</span></div><div class="t">Years with SLB</div></div>
+        <div class="s"><div class="n"><span data-count="17">0</span><span class="suf">+</span></div><div class="t">Years PMP® certified</div></div>
+      </div>
       <blockquote class="lead-quote">"Our recommendations follow the engineering evidence — never a product line. That independence is what turns technical advice into measurable business value."</blockquote>
       <div class="lead-chips">
-        <span class="chip">Crude Oil Processing</span>
-        <span class="chip">Electrostatic Systems</span>
-        <span class="chip">Project Execution</span>
-        <span class="chip">Independent Advisory</span>
+        <span class="chip">Electrostatic Dehydration–Desalting</span>
+        <span class="chip">Production Facilities Design</span>
+        <span class="chip">Onshore · Offshore · Refinery</span>
+        <span class="chip">New Technology Development</span>
+        <span class="chip">PMP® Certified</span>
       </div>
     </div>
   </div>
