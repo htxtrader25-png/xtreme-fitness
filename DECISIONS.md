@@ -133,3 +133,31 @@ Fleet capacities/rates (`src/lib/constants.ts`): Atlas 6,000 m³, Titan
 8,000 m³, Orion 4,500 m³; HOFTI Tank 101 40,000 m³. Products: VLSFO, HSFO, MGO,
 LSMGO. These are realistic assumptions for a Houston barge operation and are the
 single source of truth consumed by every engine.
+
+## D15 — Security posture & hardening
+
+A security audit confirmed no exploitable vulnerabilities (fully client-side app:
+no backend, no network calls, no secrets; React and DayPilot escape all rendered
+text; no `dangerouslySetInnerHTML`/`eval`/`innerHTML`). Three hardening measures
+were nonetheless applied:
+
+- **Import validation.** `parseEnvelope` (`src/domain/integration.ts`) treats
+  imported JSON as untrusted: it validates every field (types, enums,
+  ISO-date validity, known barge/product ids), drops malformed child records,
+  and rejects fundamentally invalid envelopes with a clear error — so a hostile
+  or corrupt file cannot seed invalid state.
+- **Content-Security-Policy.** A build-only Vite plugin injects a tight CSP
+  (`default-src 'self'`, `script-src 'self'`, `object-src 'none'`,
+  `base-uri 'none'`, …) into the production `index.html`. It is applied to the
+  build only so it never interferes with dev HMR/react-refresh. Verified: the
+  production bundle runs with zero CSP violations, including the Blob-based JSON
+  export.
+- **Dependency updates.** Upgraded Vite (→ 8) and `@vitejs/plugin-react` (→ 6),
+  clearing the dev-server esbuild/vite advisories; `npm audit` reports 0
+  vulnerabilities.
+
+While hardening the build, a **production-only startup crash** was found and
+fixed: the earlier `manualChunks` split of React into a `vendor` chunk made
+`react-dom` initialize before `react`. Only DayPilot is now split into its own
+chunk; React stays in the entry chunk. (This bug was previously masked because
+only the dev server had been exercised.)
