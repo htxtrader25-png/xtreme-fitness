@@ -325,6 +325,20 @@ section{position:relative;}
 .why-stat .n .suf{font-size:1.1rem;color:var(--muted);}
 .why-stat .t{font-size:.76rem;color:rgba(255,255,255,.55);margin-top:4px;}
 
+/* ─────────── LEADERSHIP ─────────── */
+.lead-wrap{display:grid;grid-template-columns:.82fr 1.18fr;gap:56px;align-items:center;}
+.lead-media{position:relative;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg);background:var(--ink);}
+.lead-media img{width:100%;height:auto;display:block;}
+.lead-media .lead-badge{position:absolute;left:20px;bottom:20px;right:20px;background:rgba(10,22,38,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px 16px;color:#fff;}
+.lead-media .lead-badge b{font-family:'Space Grotesk';font-size:1rem;font-weight:600;display:block;letter-spacing:-.01em;}
+.lead-media .lead-badge span{font-size:.78rem;color:rgba(255,255,255,.7);}
+.lead-body h2{font-size:clamp(1.9rem,3.4vw,2.7rem);margin:18px 0 10px;}
+.lead-role{font-family:'Space Grotesk';font-size:.98rem;font-weight:600;color:var(--accent);margin-bottom:20px;}
+.lead-body p{font-size:1.04rem;color:var(--slate);margin-bottom:16px;max-width:62ch;}
+.lead-quote{border-left:3px solid var(--accent);padding:4px 0 4px 20px;margin:24px 0;font-family:'Space Grotesk';font-size:1.14rem;font-weight:500;color:var(--ink);font-style:italic;line-height:1.4;}
+.lead-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;}
+.lead-chips .chip{font-size:.78rem;font-weight:500;color:var(--slate);background:var(--bg-2);border:1px solid var(--line);padding:6px 13px;border-radius:100px;}
+
 /* ─────────── CTA ─────────── */
 .cta{background:var(--ink);color:#fff;border-radius:0;position:relative;overflow:hidden;}
 .cta-inner{position:relative;z-index:2;display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;}
@@ -375,6 +389,8 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
   .ind-grid{grid-template-columns:repeat(2,1fr);}
   .why-wrap{grid-template-columns:1fr;gap:36px;}
   .why-side{position:relative;top:0;}
+  .lead-wrap{grid-template-columns:1fr;gap:34px;}
+  .lead-media{max-width:420px;}
   .cta-inner{grid-template-columns:1fr;gap:36px;}
   .foot-top{grid-template-columns:1fr 1fr;gap:32px;}
 }
@@ -810,7 +826,31 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
   </div>
 </section>
 
-<!-- ══════════ 9 · CTA ══════════ -->
+<!-- ══════════ 9 · LEADERSHIP ══════════ -->
+<section class="section" id="leadership">
+  <div class="wrap lead-wrap">
+    <div class="lead-media reveal">
+      <img src="assets/francisco-vera.jpg" width="1227" height="1489" loading="lazy" alt="Francisco E. Vera, Founder &amp; CEO of Oil Technologies &amp; Solutions">
+      <div class="lead-badge"><b>Francisco E. Vera</b><span>Founder &amp; Chief Executive Officer</span></div>
+    </div>
+    <div class="lead-body reveal" data-d="1">
+      <span class="divider-num">09 — Leadership</span>
+      <h2>Three decades of crude processing expertise.</h2>
+      <div class="lead-role">Francisco E. Vera — Founder &amp; CEO</div>
+      <p>Oil Technologies &amp; Solutions was founded by Francisco E. Vera, an engineering professional with more than 30 years of international experience in crude oil processing, electrostatic dehydration and desalting systems, project execution, and technical consulting.</p>
+      <p>He built the firm as a truly independent advisor — supporting engineering decisions with practical, experience-driven solutions that reduce operational risk and improve asset performance, free of any equipment or vendor bias.</p>
+      <blockquote class="lead-quote">"Our recommendations follow the engineering evidence — never a product line. That independence is what turns technical advice into measurable business value."</blockquote>
+      <div class="lead-chips">
+        <span class="chip">Crude Oil Processing</span>
+        <span class="chip">Electrostatic Systems</span>
+        <span class="chip">Project Execution</span>
+        <span class="chip">Independent Advisory</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 10 · CTA ══════════ -->
 <section class="section cta" id="cta">
   <div class="cta-glow"></div>
   <div class="wrap cta-inner">
@@ -865,6 +905,7 @@ footer{background:var(--bg-2);border-top:1px solid var(--line);padding:56px 0 32
         <a href="#cases">Results</a>
         <a href="#industries">Industries</a>
         <a href="#why">Why Us</a>
+        <a href="#leadership">Leadership</a>
       </div>
       <div class="foot-col">
         <h5>Get in touch</h5>
