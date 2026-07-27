@@ -1,0 +1,1680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Harbormaster — Houston Harbor Bunker Operations</title>
+<style>
+/* ============================================================================
+   HARBORMASTER — Houston Harbor Bunker Fleet, Inventory & Commercial Ops
+   Enterprise operational command center. Self-contained prototype.
+   Dark terminal aesthetic — Bloomberg / Palantir / Airline OCC.
+============================================================================ */
+:root{
+  --bg:#070a0f; --bg-1:#0a0e15; --panel:#0c1219; --panel-2:#0f1620; --panel-3:#131c28;
+  --line:#1b2634; --line-2:#243244; --line-soft:#161f2b;
+  --txt:#dbe4ee; --txt-2:#8fa3b8; --txt-3:#5d7186; --txt-hi:#f2f7fc;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --cyan:#22d3ee; --teal:#2dd4bf; --green:#34d399; --lime:#a3e635;
+  --amber:#fbbf24; --orange:#fb923c; --red:#f87171; --rose:#fb7185;
+  --blue:#60a5fa; --indigo:#818cf8; --violet:#a78bfa; --pink:#f472b6;
+  --accent:#22d3ee; --accent-dim:#0e3a44;
+  --ok:var(--green); --warn:var(--amber); --crit:var(--red);
+  --shadow:0 10px 30px rgba(0,0,0,.55); --radius:8px;
+  --h-top:50px; --w-rail:62px; --h-status:26px;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html,body{height:100%}
+body{
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(34,211,238,.05), transparent 60%),
+    radial-gradient(900px 500px at -5% 110%, rgba(129,140,248,.06), transparent 55%),
+    var(--bg);
+  color:var(--txt); font-family:var(--sans); font-size:13px; line-height:1.4;
+  -webkit-font-smoothing:antialiased; overflow:hidden; letter-spacing:.1px;
+}
+::selection{background:rgba(34,211,238,.28)}
+::-webkit-scrollbar{width:9px; height:9px}
+::-webkit-scrollbar-thumb{background:#1f2b3a; border-radius:6px; border:2px solid var(--panel)}
+::-webkit-scrollbar-thumb:hover{background:#2a3a4d}
+::-webkit-scrollbar-track{background:transparent}
+button{font-family:inherit; color:inherit; cursor:pointer; border:none; background:none}
+input,select{font-family:inherit; color:inherit}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- App grid ---------- */
+#app{
+  display:grid; height:100vh;
+  grid-template-columns:var(--w-rail) 1fr;
+  grid-template-rows:var(--h-top) 1fr var(--h-status);
+  grid-template-areas:"top top" "rail main" "status status";
+}
+/* ---------- Top command bar ---------- */
+#topbar{
+  grid-area:top; display:flex; align-items:center; gap:14px; padding:0 14px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel)); border-bottom:1px solid var(--line);
+  z-index:40;
+}
+.brand{display:flex; align-items:center; gap:10px; padding-right:12px; border-right:1px solid var(--line)}
+.brand .logo{
+  width:30px;height:30px;border-radius:7px;display:grid;place-items:center;flex:none;
+  background:conic-gradient(from 210deg,#0891b2,#22d3ee,#2dd4bf,#0891b2); color:#04121a; font-weight:800;
+  box-shadow:0 0 0 1px rgba(34,211,238,.4),0 4px 14px rgba(34,211,238,.25); font-size:15px;
+}
+.brand b{font-size:14px; letter-spacing:.4px; color:var(--txt-hi)}
+.brand span{font-size:9.5px; color:var(--txt-3); letter-spacing:1.5px; text-transform:uppercase; display:block; margin-top:-2px}
+.top-kpis{display:flex; gap:2px; margin-left:4px}
+.tk{padding:2px 12px; border-left:1px solid var(--line-soft); display:flex; flex-direction:column; justify-content:center}
+.tk .l{font-size:8.5px; letter-spacing:1px; color:var(--txt-3); text-transform:uppercase}
+.tk .v{font-size:14px; font-weight:650; color:var(--txt-hi)} .tk .v small{font-size:9px;color:var(--txt-2);font-weight:500}
+.top-spacer{flex:1}
+.clock{display:flex; flex-direction:column; align-items:flex-end; padding-right:10px; border-right:1px solid var(--line)}
+.clock .t{font-family:var(--mono); font-size:15px; color:var(--txt-hi); font-weight:600}
+.clock .d{font-size:9px; color:var(--txt-3); letter-spacing:.8px; text-transform:uppercase}
+.cmdbtn{
+  display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:7px;border:1px solid var(--line-2);
+  background:var(--panel-3); color:var(--txt-2); font-size:12px; transition:.15s;
+}
+.cmdbtn:hover{border-color:var(--accent); color:var(--txt-hi); box-shadow:0 0 0 1px rgba(34,211,238,.2)}
+.cmdbtn kbd{font-family:var(--mono); font-size:10px; background:#0a1119; border:1px solid var(--line-2); border-radius:4px; padding:1px 5px; color:var(--txt-3)}
+.icon-btn{width:34px;height:34px;border-radius:7px;display:grid;place-items:center;color:var(--txt-2);border:1px solid transparent;position:relative}
+.icon-btn:hover{background:var(--panel-3); color:var(--txt-hi); border-color:var(--line-2)}
+.badge-dot{position:absolute; top:5px; right:6px; width:7px;height:7px;border-radius:50%; background:var(--red); box-shadow:0 0 0 2px var(--panel); animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.role-pill{display:flex; align-items:center; gap:8px; padding:4px 6px 4px 10px; border-radius:20px; border:1px solid var(--line-2); background:var(--panel-3)}
+.role-pill .av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#22d3ee);display:grid;place-items:center;color:#04121a;font-weight:700;font-size:11px}
+.role-pill .who{line-height:1.15} .role-pill .who b{font-size:11.5px;color:var(--txt-hi)} .role-pill .who span{font-size:9px;color:var(--txt-3);display:block}
+
+/* ---------- Left rail ---------- */
+#rail{
+  grid-area:rail; background:linear-gradient(180deg,var(--panel),var(--bg-1));
+  border-right:1px solid var(--line); display:flex; flex-direction:column; align-items:center;
+  padding:8px 0; gap:3px; overflow-y:auto; z-index:30;
+}
+#rail::-webkit-scrollbar{width:0}
+.nav-item{
+  width:46px;height:44px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:var(--txt-3); position:relative; transition:.14s; flex:none;
+}
+.nav-item svg{width:19px;height:19px}
+.nav-item .lbl{font-size:7.5px; letter-spacing:.3px; text-transform:uppercase; font-weight:600}
+.nav-item:hover{color:var(--txt); background:var(--panel-3)}
+.nav-item.active{color:var(--accent); background:linear-gradient(180deg,rgba(34,211,238,.14),rgba(34,211,238,.04))}
+.nav-item.active::before{content:"";position:absolute;left:-8px;top:9px;bottom:9px;width:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.nav-sep{width:28px;height:1px;background:var(--line);margin:6px 0;flex:none}
+.nav-item .cnt{position:absolute;top:3px;right:4px;background:var(--red);color:#fff;font-size:8px;font-weight:700;border-radius:8px;padding:0 4px;min-width:14px;text-align:center}
+
+/* ---------- Main ---------- */
+#main{grid-area:main; overflow:hidden; position:relative; background:var(--bg)}
+.view{position:absolute; inset:0; overflow:auto; padding:14px; display:none; animation:fade .25s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+.view-head{display:flex; align-items:flex-end; gap:14px; margin-bottom:12px; flex-wrap:wrap}
+.view-head h1{font-size:19px; font-weight:700; color:var(--txt-hi); letter-spacing:.2px}
+.view-head .sub{font-size:11.5px; color:var(--txt-3); margin-top:1px}
+.view-head .spacer{flex:1}
+
+/* ---------- Status bar ---------- */
+#statusbar{
+  grid-area:status; display:flex; align-items:center; gap:0; font-family:var(--mono); font-size:10.5px;
+  background:linear-gradient(180deg,var(--panel),var(--panel-2)); border-top:1px solid var(--line); color:var(--txt-2);
+  overflow:hidden; z-index:30;
+}
+.sb-item{padding:0 12px; height:100%; display:flex; align-items:center; gap:6px; border-right:1px solid var(--line-soft); white-space:nowrap}
+.sb-item b{color:var(--txt-hi); font-weight:600}
+.sb-tick{flex:1; overflow:hidden; position:relative; height:100%}
+.sb-tick .track{position:absolute; white-space:nowrap; display:flex; align-items:center; height:100%; animation:ticker 60s linear infinite; will-change:transform}
+.sb-tick .track span{padding:0 22px; color:var(--txt-2)}
+.sb-tick .track b{color:var(--txt); font-weight:600}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.dotp{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+/* ---------- Generic components ---------- */
+.grid{display:grid; gap:12px}
+.panel{background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--line); border-radius:var(--radius); position:relative}
+.panel-h{display:flex; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid var(--line-soft)}
+.panel-h h3{font-size:11px; letter-spacing:.9px; text-transform:uppercase; color:var(--txt-2); font-weight:650}
+.panel-h .spacer{flex:1}
+.panel-b{padding:12px}
+.chip{display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:600; border:1px solid var(--line-2); background:var(--panel-3); color:var(--txt-2); white-space:nowrap}
+.chip.sm{padding:1px 6px; font-size:9px}
+.chip .dotp{width:6px;height:6px}
+.tag{font-size:9px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; padding:2px 6px; border-radius:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;border:1px solid var(--line-2);background:var(--panel-3);color:var(--txt);font-size:11.5px;font-weight:600;transition:.14s}
+.btn:hover{border-color:var(--accent); color:var(--txt-hi)}
+.btn.primary{background:linear-gradient(180deg,#0e7490,#0891b2); border-color:#0e7490; color:#eafcff; box-shadow:0 2px 10px rgba(8,145,178,.35)}
+.btn.primary:hover{filter:brightness(1.12)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:3px 9px; font-size:10.5px}
+.btn.danger{border-color:#7f1d1d;color:#fca5a5} .btn.danger:hover{background:#2a1010;color:#fecaca}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+.seg{display:inline-flex; border:1px solid var(--line-2); border-radius:7px; overflow:hidden; background:var(--panel)}
+.seg button{padding:5px 12px; font-size:11px; font-weight:600; color:var(--txt-3); border-right:1px solid var(--line-soft)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:linear-gradient(180deg,rgba(34,211,238,.16),rgba(34,211,238,.05)); color:var(--accent)}
+.stat{display:flex; flex-direction:column; gap:2px}
+.stat .l{font-size:9.5px; letter-spacing:.8px; text-transform:uppercase; color:var(--txt-3)}
+.stat .v{font-size:22px; font-weight:700; color:var(--txt-hi); font-family:var(--mono); line-height:1.05}
+.stat .v small{font-size:11px; color:var(--txt-2); font-weight:500}
+.stat .d{font-size:10px; font-weight:600}
+.up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--txt-3)}
+table.tbl{width:100%; border-collapse:collapse; font-size:11.5px}
+table.tbl th{text-align:left; font-size:9px; letter-spacing:.7px; text-transform:uppercase; color:var(--txt-3); font-weight:600; padding:6px 9px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel-2); z-index:2}
+table.tbl td{padding:7px 9px; border-bottom:1px solid var(--line-soft); color:var(--txt); vertical-align:middle}
+table.tbl tr:hover td{background:rgba(34,211,238,.04)}
+table.tbl.click tr{cursor:pointer}
+.bar{height:6px; border-radius:4px; background:var(--panel-3); overflow:hidden; position:relative}
+.bar>i{position:absolute; left:0; top:0; bottom:0; border-radius:4px; display:block}
+.mini{font-size:10px; color:var(--txt-3)}
+.divider{height:1px; background:var(--line-soft); margin:10px 0}
+.kv{display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--line-soft); font-size:11.5px}
+.kv:last-child{border-bottom:none} .kv .k{color:var(--txt-3)} .kv .v{color:var(--txt); font-family:var(--mono); font-weight:600}
+.pill-status{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.3px}
+.flash{animation:flash 1s ease}
+@keyframes flash{0%{background:rgba(34,211,238,.25)}100%{background:transparent}}
+.spark{display:flex; align-items:flex-end; gap:1.5px; height:26px}
+.spark i{flex:1; background:linear-gradient(180deg,var(--accent),rgba(34,211,238,.15)); border-radius:1px; min-height:2px}
+
+/* ---------- Toasts ---------- */
+#toasts{position:fixed; right:16px; bottom:38px; display:flex; flex-direction:column; gap:8px; z-index:200; max-width:340px}
+.toast{background:var(--panel-2); border:1px solid var(--line-2); border-left:3px solid var(--accent); border-radius:8px; padding:10px 12px; box-shadow:var(--shadow); animation:slidein .3s ease; display:flex; gap:9px}
+.toast.ok{border-left-color:var(--green)} .toast.warn{border-left-color:var(--amber)} .toast.crit{border-left-color:var(--red)}
+.toast .ti{font-size:12px; font-weight:700; color:var(--txt-hi)} .toast .tx{font-size:11px; color:var(--txt-2); margin-top:1px}
+@keyframes slidein{from{transform:translateX(30px); opacity:0}to{transform:none; opacity:1}}
+
+/* ---------- Modal / drawer ---------- */
+.overlay{position:fixed; inset:0; background:rgba(3,6,10,.68); backdrop-filter:blur(3px); z-index:150; display:none; align-items:center; justify-content:center; animation:fade .18s}
+.overlay.show{display:flex}
+.modal{width:min(640px,94vw); max-height:88vh; overflow:auto; background:var(--panel-2); border:1px solid var(--line-2); border-radius:12px; box-shadow:var(--shadow)}
+.modal-h{display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel-2); z-index:2}
+.modal-h h2{font-size:15px; color:var(--txt-hi)} .modal-h .spacer{flex:1}
+.modal-b{padding:16px}
+.drawer{position:fixed; top:0; right:0; bottom:0; width:min(440px,96vw); background:var(--panel-2); border-left:1px solid var(--line-2); box-shadow:-20px 0 50px rgba(0,0,0,.5); z-index:160; transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column}
+.drawer.show{transform:none}
+
+/* ---------- Copilot ---------- */
+#copilot{position:fixed; top:0; right:0; bottom:0; width:min(430px,96vw); background:linear-gradient(180deg,var(--panel-2),var(--panel)); border-left:1px solid var(--accent-dim); box-shadow:-24px 0 60px rgba(0,0,0,.55); z-index:170; transform:translateX(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column}
+#copilot.show{transform:none}
+.cp-head{padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px}
+.cp-head .orb{width:30px;height:30px;border-radius:9px;background:conic-gradient(from 0deg,#22d3ee,#818cf8,#2dd4bf,#22d3ee);display:grid;place-items:center;animation:spin 8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cp-head .orb b{color:#04121a; font-size:14px; animation:spin 8s linear infinite reverse}
+.cp-body{flex:1; overflow:auto; padding:14px; display:flex; flex-direction:column; gap:12px}
+.cp-msg{max-width:88%; padding:9px 12px; border-radius:12px; font-size:12px; line-height:1.5}
+.cp-msg.u{align-self:flex-end; background:linear-gradient(180deg,#0e7490,#0b5566); color:#eafcff; border-bottom-right-radius:3px}
+.cp-msg.a{align-self:flex-start; background:var(--panel-3); border:1px solid var(--line-2); color:var(--txt); border-bottom-left-radius:3px}
+.cp-msg.a b{color:var(--accent)}
+.cp-chips{display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 8px}
+.cp-chips .chip{cursor:pointer} .cp-chips .chip:hover{border-color:var(--accent); color:var(--txt-hi)}
+.cp-input{display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--line)}
+.cp-input input{flex:1; background:var(--panel); border:1px solid var(--line-2); border-radius:8px; padding:9px 12px; font-size:12.5px; color:var(--txt)}
+.cp-input input:focus{outline:none; border-color:var(--accent)}
+
+/* ---------- Command palette ---------- */
+#palette{position:fixed; inset:0; z-index:180; display:none; align-items:flex-start; justify-content:center; padding-top:12vh; background:rgba(3,6,10,.6); backdrop-filter:blur(3px)}
+#palette.show{display:flex}
+.pal-box{width:min(600px,92vw); background:var(--panel-2); border:1px solid var(--line-2); border-radius:12px; box-shadow:var(--shadow); overflow:hidden}
+.pal-box input{width:100%; padding:14px 16px; background:transparent; border:none; border-bottom:1px solid var(--line); font-size:15px; color:var(--txt-hi)}
+.pal-box input:focus{outline:none}
+.pal-list{max-height:52vh; overflow:auto}
+.pal-item{display:flex; align-items:center; gap:11px; padding:10px 16px; cursor:pointer; border-bottom:1px solid var(--line-soft)}
+.pal-item.sel,.pal-item:hover{background:rgba(34,211,238,.09)}
+.pal-item .pi-ic{width:26px;height:26px;border-radius:6px;background:var(--panel-3);display:grid;place-items:center;color:var(--accent)}
+.pal-item .pi-t{font-size:12.5px;color:var(--txt-hi);font-weight:600} .pal-item .pi-s{font-size:10px;color:var(--txt-3)}
+.pal-item kbd{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt-3);border:1px solid var(--line-2);border-radius:4px;padding:1px 6px}
+
+/* ---------- Scheduler / dispatch board ---------- */
+.sched-wrap{border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; background:var(--panel)}
+.sched-toolbar{display:flex; align-items:center; gap:10px; padding:9px 12px; border-bottom:1px solid var(--line); background:var(--panel-2); flex-wrap:wrap}
+.sched-scroll{overflow:auto; position:relative}
+.sched-grid{position:relative; min-width:1400px}
+.sched-timehead{display:flex; height:30px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel-2); z-index:6}
+.sched-timehead .corner{width:150px; flex:none; border-right:1px solid var(--line); display:flex; align-items:center; padding:0 10px; font-size:9px; letter-spacing:.8px; text-transform:uppercase; color:var(--txt-3); position:sticky; left:0; background:var(--panel-2); z-index:7}
+.sched-timehead .th-track{flex:1; display:flex; position:relative}
+.sched-timehead .th-cell{flex:none; border-right:1px solid var(--line-soft); font-size:9.5px; color:var(--txt-3); padding:5px 6px; font-family:var(--mono); white-space:nowrap}
+.lane{display:flex; height:56px; border-bottom:1px solid var(--line-soft); position:relative}
+.lane:hover{background:rgba(255,255,255,.012)}
+.lane-head{width:150px; flex:none; border-right:1px solid var(--line); padding:6px 10px; position:sticky; left:0; background:var(--panel-2); z-index:5; display:flex; flex-direction:column; justify-content:center; gap:2px}
+.lane-head .bn{font-size:12px; font-weight:700; color:var(--txt-hi); display:flex; align-items:center; gap:6px}
+.lane-head .bs{font-size:9px; color:var(--txt-3); display:flex; align-items:center; gap:5px}
+.lane-track{flex:1; position:relative}
+.lane-track .gl{position:absolute; top:0; bottom:0; width:1px; background:var(--line-soft)}
+.blk{position:absolute; top:6px; height:44px; border-radius:6px; padding:4px 8px; overflow:hidden; cursor:grab; user-select:none; touch-action:none; border:1px solid rgba(255,255,255,.14); box-shadow:0 3px 10px rgba(0,0,0,.35); transition:box-shadow .12s, filter .12s; z-index:2}
+.blk:hover{filter:brightness(1.1); box-shadow:0 6px 18px rgba(0,0,0,.5); z-index:4}
+.blk.dragging{opacity:.85; cursor:grabbing; z-index:20; box-shadow:0 12px 30px rgba(0,0,0,.6)}
+.blk.locked{cursor:not-allowed}
+.blk.locked::after{content:"🔒"; position:absolute; top:3px; right:5px; font-size:9px; opacity:.8}
+.blk.conflict{border-color:var(--red)!important; box-shadow:0 0 0 1.5px var(--red),0 3px 10px rgba(248,113,113,.35); animation:confpulse 1.4s infinite}
+@keyframes confpulse{0%,100%{box-shadow:0 0 0 1.5px var(--red),0 3px 10px rgba(248,113,113,.3)}50%{box-shadow:0 0 0 2.5px rgba(248,113,113,.7),0 3px 14px rgba(248,113,113,.5)}}
+.blk .bt{font-size:10.5px; font-weight:700; color:#fff; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.blk .bd{font-size:9px; color:rgba(255,255,255,.82); white-space:nowrap; margin-top:1px}
+.blk .rz{position:absolute; top:0; bottom:0; width:7px; cursor:ew-resize; z-index:3}
+.blk .rz.l{left:0} .blk .rz.r{right:0}
+.blk .rz:hover{background:rgba(255,255,255,.25)}
+.now-line{position:absolute; top:0; bottom:0; width:2px; background:var(--red); z-index:8; pointer-events:none; box-shadow:0 0 8px rgba(248,113,113,.7)}
+.now-line::before{content:"NOW"; position:absolute; top:-1px; left:3px; font-size:7.5px; font-weight:800; color:var(--red); background:var(--bg); padding:0 3px; letter-spacing:.5px}
+.hofti-marker{position:absolute; width:2px; top:2px; bottom:2px; background:repeating-linear-gradient(180deg,var(--violet) 0 4px,transparent 4px 8px); opacity:.5; z-index:1}
+
+/* ---------- Map ---------- */
+.map-wrap{position:relative; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); background:#050a12}
+.map-canvas{display:block; width:100%; height:100%}
+.map-legend{position:absolute; bottom:10px; left:10px; background:rgba(8,14,20,.85); border:1px solid var(--line-2); border-radius:7px; padding:8px 10px; font-size:10px; display:flex; flex-direction:column; gap:4px}
+.map-legend .lg{display:flex; align-items:center; gap:6px; color:var(--txt-2)}
+
+/* ---------- Waterfall / gauges ---------- */
+.gauge{position:relative; width:100%; aspect-ratio:2/1}
+.donut{--p:70; width:120px; height:120px; border-radius:50%;
+  background:conic-gradient(var(--accent) calc(var(--p)*1%), var(--panel-3) 0);
+  display:grid; place-items:center; position:relative}
+.donut::before{content:""; position:absolute; inset:12px; border-radius:50%; background:var(--panel)}
+.donut .dc{position:relative; text-align:center}
+.donut .dc b{font-size:20px; font-family:var(--mono); color:var(--txt-hi)} .donut .dc span{font-size:9px; color:var(--txt-3); display:block; text-transform:uppercase; letter-spacing:.6px}
+.wf{display:flex; align-items:flex-end; gap:4px; height:150px; padding-top:10px}
+.wf .col{flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end}
+.wf .col .bar2{width:100%; border-radius:3px 3px 0 0; position:relative; min-height:3px}
+.wf .col .lab{font-size:8.5px; color:var(--txt-3); text-align:center; line-height:1.1}
+.wf .col .val{font-size:9.5px; font-family:var(--mono); color:var(--txt-2); font-weight:600}
+
+.tanks{display:flex; gap:10px; flex-wrap:wrap}
+.tank{width:78px; text-align:center}
+.tank .cyl{height:110px; border:1.5px solid var(--line-2); border-radius:6px; position:relative; overflow:hidden; background:linear-gradient(180deg,var(--panel),var(--bg-1))}
+.tank .fill{position:absolute; left:0; right:0; bottom:0; transition:height .8s cubic-bezier(.4,0,.2,1)}
+.tank .fill::before{content:""; position:absolute; top:0; left:0; right:0; height:3px; background:rgba(255,255,255,.35)}
+.tank .minl{position:absolute; left:0; right:0; border-top:1px dashed var(--amber); z-index:2}
+.tank .nm{font-size:10px; font-weight:700; color:var(--txt-hi); margin-top:5px}
+.tank .pd{font-size:8.5px; color:var(--txt-3)} .tank .amt{font-size:9.5px; font-family:var(--mono); color:var(--txt-2)}
+
+/* utility layouts */
+.row{display:flex; gap:12px} .col{display:flex; flex-direction:column; gap:12px}
+.wrap{flex-wrap:wrap}
+.scroll-y{overflow-y:auto}
+.muted{color:var(--txt-3)}
+.center{display:grid; place-items:center}
+.hl{color:var(--txt-hi)}
+a{color:var(--accent); text-decoration:none}
+.hidden{display:none!important}
+
+/* ---------- Responsive: laptop / small desktop ---------- */
+@media (max-width:1200px){
+  .top-kpis .tk:nth-child(n+4){display:none}
+}
+@media (max-width:920px){
+  .brand span,.top-kpis{display:none}
+  :root{--w-rail:54px}
+  /* wrap dense KPI/stat rows so they never overflow on tablets */
+  #execKpis{grid-template-columns:repeat(3,1fr)!important}
+  #invDims{grid-template-columns:repeat(3,1fr)!important}
+}
+
+/* ---------- Responsive: tablet portrait ---------- */
+@media (max-width:820px){
+  #execKpis,#invDims{grid-template-columns:repeat(2,1fr)!important}
+  .view .grid[style*="repeat(6"],.view .grid[style*="repeat(5"],.view .grid[style*="repeat(4"]{grid-template-columns:repeat(2,1fr)!important}
+  .view .grid[style*="repeat(3"]{grid-template-columns:repeat(2,1fr)!important}
+}
+
+/* ---------- Responsive: phones ---------- */
+@media (max-width:640px){
+  :root{--h-top:48px;--h-status:0px}
+  /* single-column app with a bottom tab bar instead of a side rail */
+  #app{grid-template-columns:1fr; grid-template-rows:var(--h-top) 1fr auto; grid-template-areas:"top" "main" "rail"}
+  #statusbar{display:none}
+
+  /* top bar: compact — icon-only search, hide clock & role text */
+  #topbar{gap:8px; padding:0 10px}
+  .cmd-lbl{display:none}
+  .cmdbtn{padding:7px 10px}
+  .clock{display:none}
+  .role-pill{padding:4px; border:none; background:transparent}
+  .role-pill .who{display:none}
+  .brand{padding-right:8px}
+  .brand b{font-size:12.5px}
+
+  /* rail -> horizontal, scrollable bottom navigation */
+  #rail{
+    flex-direction:row; width:100%; height:auto; gap:2px; padding:5px 8px calc(5px + env(safe-area-inset-bottom));
+    border-right:none; border-top:1px solid var(--line); overflow-x:auto; overflow-y:hidden;
+    background:linear-gradient(0deg,var(--panel),var(--bg-1));
+  }
+  #rail::-webkit-scrollbar{height:0}
+  .nav-item{width:auto; min-width:52px; height:42px; padding:0 8px; flex:none}
+  .nav-item .lbl{font-size:8px}
+  .nav-item.active::before{left:8px; right:8px; top:auto; bottom:-5px; width:auto; height:3px}
+  .nav-item .cnt{top:1px; right:6px}
+  .nav-sep{width:1px; height:26px; margin:0 3px}
+
+  /* stack every content grid; let panels scroll their own wide tables */
+  .view{padding:10px}
+  .view .grid{grid-template-columns:1fr!important; height:auto!important}
+  .panel-b{overflow-x:auto}
+  .view-head h1{font-size:16px}
+  .view-head{gap:8px}
+
+  /* fleet board map gets a sensible height when stacked */
+  #view-fleet .map-wrap{min-height:340px}
+
+  /* scheduler: tighter lane labels, momentum scroll */
+  .sched-scroll{-webkit-overflow-scrolling:touch}
+  .lane-head,.sched-timehead .corner{width:112px}
+  .sched-toolbar{gap:6px}
+
+  /* toasts sit above the bottom nav, never wider than the screen */
+  #toasts{right:10px; left:10px; bottom:64px; max-width:none}
+
+  /* full-height side surfaces */
+  #copilot,.drawer{width:100vw}
+
+  /* larger tap targets */
+  .btn,.chip{min-height:30px}
+  .seg button{padding:7px 12px}
+}
+
+/* respect reduced-motion */
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important; animation-iteration-count:1!important}
+  .sb-tick .track{animation:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="brand">
+      <div class="logo">⚓</div>
+      <div><b>HARBORMASTER</b><span>Houston Harbor Ops</span></div>
+    </div>
+    <div class="top-kpis" id="topKpis"></div>
+    <div class="top-spacer"></div>
+    <button class="cmdbtn" onclick="Palette.open()">🔍 <span class="cmd-lbl">Search / Command <kbd>⌘K</kbd></span></button>
+    <div class="clock"><div class="t" id="clkT">--:--:--</div><div class="d" id="clkD">HOUSTON • CDT</div></div>
+    <button class="icon-btn" title="Alerts" onclick="showAlerts()">🔔<span class="badge-dot" id="alertDot"></span></button>
+    <button class="icon-btn" title="AI Copilot" onclick="Copilot.toggle()" style="color:var(--accent)">✦</button>
+    <div class="role-pill" onclick="RolePicker.open()" style="cursor:pointer">
+      <div class="av" id="roleAv">EX</div>
+      <div class="who"><b id="roleName">Executive</b><span id="roleSub">Leadership</span></div>
+    </div>
+  </div>
+
+  <!-- LEFT RAIL -->
+  <div id="rail"></div>
+
+  <!-- MAIN -->
+  <div id="main"></div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <div class="sb-item"><span class="dotp" style="background:var(--green)"></span> <b>SYSTEMS NOMINAL</b></div>
+    <div class="sb-item">FLEET <b id="sbFleet">8</b></div>
+    <div class="sb-item">ACTIVE DEL <b id="sbDel">0</b></div>
+    <div class="sb-item">HOFTI <b id="sbHofti">0</b> MT</div>
+    <div class="sb-item">FLOATING <b id="sbFloat">0</b> MT</div>
+    <div class="sb-tick"><div class="track" id="sbTick"></div></div>
+    <div class="sb-item">AIS <span class="dotp" style="background:var(--green)"></span> LIVE</div>
+    <div class="sb-item">NOAA <span class="dotp" style="background:var(--green)"></span></div>
+    <div class="sb-item" id="sbEnv">v2.4 • ENTRA ✓</div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<!-- COPILOT -->
+<div id="copilot">
+  <div class="cp-head">
+    <div class="orb"><b>✦</b></div>
+    <div style="flex:1"><b style="font-size:13px;color:var(--txt-hi)">Harbormaster Copilot</b><div style="font-size:9.5px;color:var(--txt-3)">Azure OpenAI • grounded on live ops data</div></div>
+    <button class="icon-btn" onclick="Copilot.toggle()">✕</button>
+  </div>
+  <div class="cp-body" id="cpBody"></div>
+  <div class="cp-chips" id="cpChips"></div>
+  <div class="cp-input"><input id="cpInput" placeholder="Ask anything… e.g. Show idle barges" onkeydown="if(event.key==='Enter')Copilot.send()"><button class="btn primary" onclick="Copilot.send()">Send</button></div>
+</div>
+
+<!-- COMMAND PALETTE -->
+<div id="palette"><div class="pal-box">
+  <input id="palInput" placeholder="Search barges, deliveries, modules, or type a command…" oninput="Palette.filter()" onkeydown="Palette.key(event)">
+  <div class="pal-list" id="palList"></div>
+</div></div>
+
+<!-- OVERLAY (modals) -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<!-- DRAWER -->
+<div class="drawer" id="drawer"></div>
+
+<script>
+/* =====================================================================
+   HARBORMASTER — application core
+   ===================================================================== */
+'use strict';
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const rint=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const uid=(p='id')=>p+'_'+Math.random().toString(36).slice(2,8);
+const fmt=(n,d=0)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const mt=n=>fmt(n)+' MT';
+const money=(n,d=0)=>'$'+fmt(n,d);
+const moneyK=n=>n>=1e6?'$'+fmt(n/1e6,2)+'M':n>=1e3?'$'+fmt(n/1e3,1)+'K':'$'+fmt(n);
+const pct=(n,d=0)=>fmt(n,d)+'%';
+const HOUR=3600e3, MIN=60e3, DAY=86400e3;
+function el(tag,attrs={},...kids){const e=document.createElement(tag);for(const k in attrs){if(k==='class')e.className=attrs[k];else if(k==='html')e.innerHTML=attrs[k];else if(k.startsWith('on')&&typeof attrs[k]==='function')e.addEventListener(k.slice(2),attrs[k]);else if(k==='style'&&typeof attrs[k]==='object')Object.assign(e.style,attrs[k]);else e.setAttribute(k,attrs[k]);}for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(c));}return e;}
+
+/* ---------- Domain constants ---------- */
+const PRODUCTS={
+  VLSFO:{name:'VLSFO 0.50%',color:'#22d3ee',price:585},
+  HSFO :{name:'HSFO 3.50%', color:'#fb923c',price:465},
+  ULSFO:{name:'ULSFO 0.10%',color:'#a78bfa',price:640},
+  LSMGO:{name:'LSMGO 0.10%',color:'#34d399',price:820},
+  MGO  :{name:'MGO DMA',    color:'#fbbf24',price:790},
+};
+const PKEYS=Object.keys(PRODUCTS);
+const STATUSES=['Available','Transit to HOFTI','Waiting to Load','Loading','Load Complete','Inspection Pending','Inspection Complete','Nomination Draft Ready','Nomination Sent','Transit to Customer','Waiting Alongside','Bunkering','Delivery Complete','Return Transit','Queue for Reload','Available Again'];
+const STATUS_COLOR={
+  'Available':'#5d7186','Available Again':'#5d7186','Transit to HOFTI':'#60a5fa','Waiting to Load':'#fbbf24','Loading':'#a78bfa','Load Complete':'#818cf8','Inspection Pending':'#fb923c','Inspection Complete':'#34d399','Nomination Draft Ready':'#22d3ee','Nomination Sent':'#2dd4bf','Transit to Customer':'#60a5fa','Waiting Alongside':'#fbbf24','Bunkering':'#34d399','Delivery Complete':'#a3e635','Return Transit':'#818cf8','Queue for Reload':'#fb923c'};
+const CUSTOMERS=[
+  {id:'MAERSK',name:'Maersk',vessels:['Maersk Sentosa','Maersk Halifax','Maersk Emden'],lead:24},
+  {id:'MSC',name:'MSC',vessels:['MSC Ambra','MSC Diana','MSC Loreto'],lead:24},
+  {id:'CMACGM',name:'CMA CGM',vessels:['CMA CGM Jacques Saade','CMA CGM Marco Polo'],lead:48},
+  {id:'FRONTLINE',name:'Frontline',vessels:['Front Altair','Front Panther'],lead:12},
+  {id:'TEEKAY',name:'Teekay',vessels:['Teekay Foundation','Teekay Spirit'],lead:12},
+  {id:'ONE',name:'Ocean Network Express',vessels:['ONE Innovation','ONE Olympus'],lead:24},
+  {id:'HAPAG',name:'Hapag-Lloyd',vessels:['Hapag Houston Express','Hapag Berlin'],lead:24},
+  {id:'EURONAV',name:'Euronav',vessels:['Euronav Alsace','Euronav Nautica'],lead:6},
+];
+const BERTHS=['Barbours Cut','Bayport','Bolivar Roads Anch.','Galveston Anch.','City Dock 32','Jacintoport','Manchester','Lynchburg Landing'];
+
+/* ---------- Fleet seed ---------- */
+const FLEET_SEED=[
+  {id:'HH-201',name:'San Jacinto',cap:6500,charter:8200},
+  {id:'HH-202',name:'Buffalo Bayou',cap:6500,charter:8200},
+  {id:'HH-203',name:'Bolivar',cap:4200,charter:6100},
+  {id:'HH-204',name:"Morgan's Point",cap:4200,charter:6100},
+  {id:'HH-205',name:'Texas City',cap:8000,charter:9600},
+  {id:'HH-206',name:'Baytown',cap:8000,charter:9600},
+  {id:'HH-207',name:'Galveston',cap:3000,charter:4800},
+  {id:'HH-208',name:'Lynchburg',cap:3000,charter:4800},
+];
+
+/* HOFTI position (Houston ship channel-ish normalized coords 0..1) */
+const HOFTI_POS={x:.30,y:.42};
+const HARBOR_POINTS={ // normalized channel waypoints for map & customers
+  'Barbours Cut':{x:.52,y:.30},'Bayport':{x:.60,y:.55},'Bolivar Roads Anch.':{x:.86,y:.72},
+  'Galveston Anch.':{x:.90,y:.84},'City Dock 32':{x:.40,y:.36},'Jacintoport':{x:.46,y:.40},
+  'Manchester':{x:.35,y:.34},'Lynchburg Landing':{x:.55,y:.22}};
+
+/* =====================================================================
+   STATE + DATA MODEL
+   ===================================================================== */
+const state={
+  now:new Date('2026-07-24T08:00:00-05:00').getTime(),
+  view:'exec', role:'exec', schedView:'day', schedZoom:1,
+  undo:[], redo:[], published:true, tick:0,
+};
+const db={fleet:[],deliveries:[],tanks:[],nominations:[],alerts:[],audit:[],events:[]};
+
+const ROLES={
+  exec:{name:'Executive',sub:'Leadership',av:'EX',home:'exec'},
+  ops:{name:'Ops Manager',sub:'Operations',av:'OM',home:'fleet'},
+  dispatch:{name:'Dispatcher',sub:'Dispatch Desk',av:'DP',home:'sched'},
+  scheduler:{name:'Marine Scheduler',sub:'Scheduling',av:'MS',home:'sched'},
+  blender:{name:'Blender',sub:'Blending Control',av:'BL',home:'blender'},
+  commercial:{name:'Commercial Op',sub:'Commercial',av:'CO',home:'noms'},
+  trader:{name:'Trader',sub:'Trading Desk',av:'TR',home:'inv'},
+  cm:{name:'Commercial Mgr',sub:'Commercial',av:'CM',home:'charter'},
+};
+
+function initData(){
+  // HOFTI tanks — one product family per tank
+  const tankSpec=[['T-01','VLSFO',5.2e4,6e4],['T-02','VLSFO',4.1e4,6e4],['T-03','HSFO',3.6e4,5e4],['T-04','HSFO',2.4e4,5e4],['T-05','ULSFO',1.9e4,2.6e4],['T-06','LSMGO',1.5e4,2.2e4],['T-07','MGO',1.1e4,2e4],['T-08','VLSFO',3.3e4,6e4]];
+  db.tanks=tankSpec.map(([id,p,cur,cap])=>({id,product:p,cur,cap,min:cap*0.12,working:cap*0.9,reserved:cur*rnd(.08,.2),rate:rint(650,1100)}));
+  // Fleet
+  db.fleet=FLEET_SEED.map((f,i)=>{
+    const product=pick(PKEYS);
+    const onboard=Math.round(f.cap*rnd(.15,.92)/10)*10;
+    const st=pick(STATUSES);
+    return {...f,product,onboard,heel:Math.round(f.cap*0.02),
+      status:st,lat:0,lng:0,px:rnd(.2,.8),py:rnd(.2,.8),
+      util:rnd(58,94),idle:rnd(2,34),offhire:Math.random()<.15,
+      customer:null,eta:state.now+rnd(1,10)*HOUR,inspection:pick(['—','Pending','Complete','In Progress']),
+      risk:rint(8,72),nextReload:state.now+rnd(4,20)*HOUR,speed:rnd(4,9),
+      committed:0,heading:rnd(0,360)};
+  });
+  // Deliveries / schedule events — spread over 14 days, denser near now
+  db.deliveries=[];
+  let did=100;
+  for(const b of db.fleet){
+    let cursor=state.now - rnd(2,8)*HOUR;
+    const n=rint(4,7);
+    for(let i=0;i<n;i++){
+      const cust=pick(CUSTOMERS); const vessel=pick(cust.vessels);
+      const product=Math.random()<.6?b.product:pick(PKEYS);
+      const qty=Math.round(rnd(300,Math.min(b.cap*0.55,3800))/10)*10;
+      const dur=clamp(qty/900,1.2,5)*HOUR + rnd(1,2.5)*HOUR;
+      const gap=rnd(3,16)*HOUR;
+      const start=cursor+gap;
+      const d={id:'D-'+(did++),barge:b.id,customer:cust.id,custName:cust.name,vessel,product,qty,
+        start,end:start+dur,berth:pick(BERTHS),lead:cust.lead,
+        status:i===0?'Bunkering':pick(['Scheduled','Nominated','Confirmed','Scheduled','Loading']),
+        nomination:null,locked:Math.random()<.18,inspection:pick(['—','Pending','Complete']),
+        est:qty,inspected:null};
+      db.deliveries.push(d);
+      cursor=d.end;
+    }
+  }
+  // Nominations for near-term deliveries
+  db.deliveries.filter(d=>d.start>state.now && d.start<state.now+3*DAY).slice(0,12).forEach((d,i)=>{
+    const st=pick(['Draft Ready','Draft Ready','Sent','Acknowledged','Revision Required']);
+    const nom={id:'BM-'+(4200+i),delivery:d.id,status:st,created:state.now-rnd(1,20)*HOUR,
+      barge:d.barge,customer:d.custName,vessel:d.vessel,product:d.product,qty:d.qty,
+      window:d.start,revisions:st==='Revision Required'?rint(1,2):0};
+    d.nomination=nom.id; db.nominations.push(nom);
+  });
+  // Alerts
+  const al=[
+    ['crit','HOFTI T-07 MGO below minimum operating','HOFTI Terminal',state.now-22*MIN],
+    ['warn','Berth A loading queue 3 barges — 4.2h wait','Loading Queue',state.now-48*MIN],
+    ['warn','Fog advisory Bolivar Roads — visibility <0.5nm 04:00–09:00','NOAA Marine',state.now-1.2*HOUR],
+    ['crit','Delivery D-118 nomination deadline in 45 min','Nomination Engine',state.now-6*MIN],
+    ['warn','HH-207 Galveston idle 31h — utilization 61%','Charter Optimizer',state.now-2*HOUR],
+    ['info','Inspection PDF received — D-103 (Maersk Sentosa)','Doc Intelligence',state.now-12*MIN],
+    ['warn','Channel current 2.8kt flood — transit +18min','AIS/NOAA',state.now-35*MIN],
+  ];
+  db.alerts=al.map(([sev,msg,src,t])=>({id:uid('al'),sev,msg,src,t,ack:false}));
+  // Audit
+  const acts=['published schedule v2.41','sent nomination BM-4203','accepted AI reassignment D-112→HH-206','extended charter HH-205','acknowledged inspection D-103','reserved 1,200 MT VLSFO for Maersk','locked delivery D-101'];
+  db.audit=acts.map((a,i)=>({id:uid('au'),who:pick(['A. Reyes','J. Okafor','M. Chen','S. Delacroix','System']),act:a,t:state.now-rnd(.2,8)*HOUR,role:pick(['Dispatcher','Commercial Op','Ops Mgr','System'])}));
+  recomputeAll();
+}
+
+/* =====================================================================
+   INVENTORY ENGINE — derived continuously
+   ===================================================================== */
+const inv={};
+function recomputeAll(){
+  // HOFTI by product
+  const hofti={total:0,byProd:{},reserved:0};
+  for(const t of db.tanks){hofti.total+=t.cur; hofti.reserved+=t.reserved; hofti.byProd[t.product]=(hofti.byProd[t.product]||0)+t.cur;}
+  // Floating
+  let floating=0; const floatByProd={}, floatByBarge={};
+  for(const b of db.fleet){
+    b.committed=db.deliveries.filter(d=>d.barge===b.id && d.start>state.now && ['Scheduled','Nominated','Confirmed','Loading'].includes(d.status)).reduce((s,d)=>s+d.qty,0);
+    floating+=b.onboard; floatByProd[b.product]=(floatByProd[b.product]||0)+b.onboard; floatByBarge[b.id]=b.onboard;
+  }
+  const committed=db.deliveries.filter(d=>d.start>state.now && d.start<state.now+3*DAY).reduce((s,d)=>s+d.qty,0);
+  const physical=hofti.total+floating;
+  const reserved=hofti.reserved+db.fleet.reduce((s,b)=>s+b.committed,0);
+  const commercialAvail=Math.max(0,physical-reserved);
+  const offspec=Math.round(physical*0.006);
+  Object.assign(inv,{
+    hofti:hofti.total,floating,physical,reserved,committed,
+    uncommitted:Math.max(0,physical-committed),commercialAvail,offspec,
+    byProd:PKEYS.map(p=>({p,hofti:hofti.byProd[p]||0,floating:floatByProd[p]||0,total:(hofti.byProd[p]||0)+(floatByProd[p]||0)})),
+    floatByBarge,hoftiByProd:hofti.byProd,
+    burn:db.deliveries.filter(d=>d.start>state.now&&d.start<state.now+DAY).reduce((s,d)=>s+d.qty,0),
+  });
+}
+
+/* =====================================================================
+   NAVIGATION
+   ===================================================================== */
+const NAV=[
+  {id:'exec',label:'Exec',icon:'grid',title:'Executive Command Center'},
+  {id:'fleet',label:'Fleet',icon:'ship',title:'Fleet Board'},
+  {id:'sched',label:'Schedule',icon:'cal',title:'Fleet Scheduler'},
+  {sep:true},
+  {id:'hofti',label:'HOFTI',icon:'tank',title:'HOFTI Terminal Management'},
+  {id:'float',label:'Floating',icon:'wave',title:'Floating Inventory'},
+  {id:'inv',label:'Inventory',icon:'layers',title:'Enterprise Inventory Engine'},
+  {id:'blender',label:'Blender',icon:'flask',title:'Blender Control Center'},
+  {sep:true},
+  {id:'noms',label:'Noms',icon:'doc',title:'Nomination Management',count:()=>db.nominations.filter(n=>n.status==='Draft Ready'||n.status==='Revision Required').length},
+  {id:'dispatch',label:'AI Disp',icon:'cpu',title:'AI Dispatch Engine'},
+  {id:'charter',label:'Charter',icon:'chart',title:'Charter Optimization'},
+  {id:'weather',label:'Weather',icon:'cloud',title:'Weather & Marine Intel'},
+  {id:'analytics',label:'Predict',icon:'pulse',title:'Predictive Analytics'},
+  {sep:true},
+  {id:'audit',label:'Audit',icon:'shield',title:'Audit & Activity'},
+];
+const ICONS={
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  ship:'<path d="M3 14l2-5h14l2 5"/><path d="M4 14c2 3 4 4 8 4s6-1 8-4"/><path d="M12 3v6"/>',
+  cal:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
+  tank:'<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M5 12h14M5 16h14"/>',
+  wave:'<path d="M2 8c3-3 5 3 8 0s5-3 8 0M2 14c3-3 5 3 8 0s5-3 8 0"/>',
+  layers:'<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>',
+  doc:'<path d="M6 2h8l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v5h5"/>',
+  cpu:'<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/>',
+  cloud:'<path d="M6 16a4 4 0 0 1 .5-8 5 5 0 0 1 9.5 1.5A3.5 3.5 0 0 1 18 16H6z"/>',
+  pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  shield:'<path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/>',
+};
+function svg(name){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;}
+
+function buildRail(){
+  const r=$('#rail'); r.innerHTML='';
+  for(const n of NAV){
+    if(n.sep){r.append(el('div',{class:'nav-sep'})); continue;}
+    const item=el('div',{class:'nav-item'+(state.view===n.id?' active':''),title:n.title,onclick:()=>go(n.id)});
+    item.innerHTML=svg(n.icon)+`<div class="lbl">${n.label}</div>`;
+    if(n.count){const c=n.count(); if(c>0)item.append(el('div',{class:'cnt'},String(c)));}
+    r.append(item);
+  }
+}
+function go(id){
+  state.view=id; buildRail();
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  let v=$('#view-'+id);
+  if(!v){v=el('div',{class:'view',id:'view-'+id}); $('#main').append(v);}
+  v.classList.add('active');
+  VIEWS[id] ? VIEWS[id](v) : v.innerHTML='<div class="muted">Module not found</div>';
+  v.scrollTop=0;
+}
+
+/* =====================================================================
+   VIEW REGISTRY (populated below)
+   ===================================================================== */
+const VIEWS={};
+
+/* small helpers for building panels */
+function panel(title,bodyHTML,tools=''){return `<div class="panel"><div class="panel-h"><h3>${title}</h3><div class="spacer"></div>${tools}</div><div class="panel-b">${bodyHTML}</div></div>`;}
+function statCard(l,v,sub,delta){return `<div class="panel"><div class="panel-b"><div class="stat"><div class="l">${l}</div><div class="v">${v} ${sub?`<small>${sub}</small>`:''}</div>${delta?`<div class="d ${delta.dir}">${delta.txt}</div>`:''}</div></div></div>`;}
+function statusPill(s){const c=STATUS_COLOR[s]||'#5d7186';return `<span class="pill-status" style="background:${c}22;color:${c};border:1px solid ${c}55">${s}</span>`;}
+function prodChip(p){const P=PRODUCTS[p];return `<span class="chip sm"><span class="dotp" style="background:${P.color}"></span>${p}</span>`;}
+function spark(vals,color='var(--accent)'){const mx=Math.max(...vals,1);return `<div class="spark">${vals.map(v=>`<i style="height:${clamp(v/mx*100,4,100)}%;background:linear-gradient(180deg,${color},transparent)"></i>`).join('')}</div>`;}
+function barLine(pctv,color,h=6){return `<div class="bar" style="height:${h}px"><i style="width:${clamp(pctv,0,100)}%;background:${color}"></i></div>`;}
+
+/* time helpers for houston */
+function fmtClock(t){return new Date(t).toLocaleTimeString('en-US',{hour12:false,timeZone:'America/Chicago'});}
+function fmtHM(t){return new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'America/Chicago'});}
+function fmtDay(t){return new Date(t).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/Chicago'});}
+function relTime(t){const d=(state.now-t)/MIN; if(d<1)return 'now'; if(d<60)return Math.round(d)+'m ago'; if(d<1440)return Math.round(d/60)+'h ago'; return Math.round(d/1440)+'d ago';}
+function untilTime(t){const d=(t-state.now)/MIN; if(d<0)return Math.round(-d)+'m ago'; if(d<60)return 'in '+Math.round(d)+'m'; return 'in '+(d/60).toFixed(1)+'h';}
+
+/* =====================================================================
+   TOASTS + ALERTS
+   ===================================================================== */
+function toast(title,text,kind=''){
+  const t=el('div',{class:'toast '+kind});
+  t.innerHTML=`<div><div class="ti">${title}</div><div class="tx">${text}</div></div>`;
+  $('#toasts').append(t);
+  setTimeout(()=>{t.style.transition='.4s';t.style.opacity='0';t.style.transform='translateX(30px)';setTimeout(()=>t.remove(),400);},4200);
+}
+function showAlerts(){
+  const rows=db.alerts.map(a=>{
+    const c=a.sev==='crit'?'var(--red)':a.sev==='warn'?'var(--amber)':'var(--blue)';
+    return `<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)">
+      <span class="dotp" style="background:${c};margin-top:5px"></span>
+      <div style="flex:1"><div class="hl" style="font-size:12px">${a.msg}</div>
+      <div class="mini">${a.src} • ${relTime(a.t)}</div></div>
+      <button class="btn sm ghost" onclick="ackAlert('${a.id}')">${a.ack?'✓':'Ack'}</button></div>`;
+  }).join('');
+  openModal('Active Alerts & Advisories',`<div>${rows}</div>`);
+}
+function ackAlert(id){const a=db.alerts.find(x=>x.id===id); if(a){a.ack=true; toast('Acknowledged',a.msg,'ok'); showAlerts(); updateAlertDot();}}
+function updateAlertDot(){const n=db.alerts.filter(a=>!a.ack&&a.sev!=='info').length; $('#alertDot').style.display=n?'block':'none';}
+
+/* =====================================================================
+   MODAL / DRAWER
+   ===================================================================== */
+function openModal(title,html,footer=''){
+  $('#modal').innerHTML=`<div class="modal-h"><h2>${title}</h2><div class="spacer"></div><button class="icon-btn" onclick="closeModal()">✕</button></div><div class="modal-b">${html}</div>${footer?`<div class="modal-b" style="border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end">${footer}</div>`:''}`;
+  $('#overlay').classList.add('show');
+}
+function closeModal(){$('#overlay').classList.remove('show');}
+function openDrawer(html){$('#drawer').innerHTML=html; $('#drawer').classList.add('show');}
+function closeDrawer(){$('#drawer').classList.remove('show');}
+
+/* =====================================================================
+   ROLE PICKER
+   ===================================================================== */
+const RolePicker={
+  open(){
+    const rows=Object.entries(ROLES).map(([k,r])=>`<div class="pal-item" onclick="RolePicker.set('${k}')">
+      <div class="pi-ic">${r.av}</div><div><div class="pi-t">${r.name}</div><div class="pi-s">${r.sub} • home: ${NAV.find(n=>n.id===r.home)?.title||''}</div></div>
+      ${state.role===k?'<kbd>current</kbd>':''}</div>`).join('');
+    openModal('Switch Workspace / Role',`<div class="mini" style="margin-bottom:8px">Role-based workspaces share one operational data model. Permissions & default modules adapt per role.</div>${rows}`);
+  },
+  set(k){state.role=k; const r=ROLES[k]; $('#roleAv').textContent=r.av; $('#roleName').textContent=r.name; $('#roleSub').textContent=r.sub; closeModal(); toast('Workspace switched','Now operating as '+r.name,'ok'); go(r.home);}
+};
+
+/* =====================================================================
+   BOOT (views + scheduler + copilot defined in later script blocks)
+   ===================================================================== */
+function boot(){
+  initData();
+  buildRail();
+  buildTicker();
+  go(ROLES[state.role].home);
+  updateAlertDot();
+  tickClock();
+  setInterval(tickClock,1000);
+  setInterval(simTick,3000);
+  setInterval(liveRefresh,2000);
+  // demo alert
+  setTimeout(()=>toast('Nomination deadline','D-118 (Front Altair) nomination auto-drafted — review & send','warn'),2500);
+}
+function tickClock(){
+  state.now+=1000;
+  $('#clkT').textContent=fmtClock(state.now);
+  $('#clkD').textContent='HOUSTON • '+fmtDay(state.now).toUpperCase();
+}
+function buildTicker(){
+  const items=[
+    ['Fleet utilization','82.4%','var(--green)'],['HOFTI VLSFO','93,400 MT','var(--cyan)'],
+    ['Idle charter cost / day','$14,280','var(--amber)'],['VLSFO Platts HOU','$585.00','var(--green)'],
+    ['HSFO','$465.00','var(--orange)'],['Deliveries today','19','var(--cyan)'],
+    ['Demurrage exposure','$0','var(--green)'],['Channel current','2.8kt flood','var(--amber)'],
+    ['Active nominations','12','var(--teal)'],['Off-spec inventory','612 MT','var(--red)'],
+  ];
+  const seg=items.map(([l,v,c])=>`<span><b style="color:${c}">${l}</b> ${v}</span>`).join('');
+  $('#sbTick').innerHTML=seg+seg;
+}
+function updateTopKpis(){
+  const k=$('#topKpis'); const fu=(db.fleet.reduce((s,b)=>s+b.util,0)/db.fleet.length);
+  const data=[
+    ['Fleet Util',pct(fu,1),''],
+    ['Enterprise Inv',fmt(inv.physical/1000,1),'kMT'],
+    ['Floating',fmt(inv.floating/1000,1),'kMT'],
+    ['Comm. Avail',fmt(inv.commercialAvail/1000,1),'kMT'],
+    ['Active Del',String(db.deliveries.filter(d=>d.end>state.now&&d.start<state.now+DAY).length),''],
+  ];
+  k.innerHTML=data.map(([l,v,s])=>`<div class="tk"><div class="l">${l}</div><div class="v">${v} ${s?`<small>${s}</small>`:''}</div></div>`).join('');
+}
+</script>
+
+<script>
+/* =====================================================================
+   VIEW: EXECUTIVE COMMAND CENTER
+   ===================================================================== */
+VIEWS.exec=function(v){
+  const fu=db.fleet.reduce((s,b)=>s+b.util,0)/db.fleet.length;
+  const idleCost=db.fleet.filter(b=>b.util<70).reduce((s,b)=>s+b.charter*(1-b.util/100),0);
+  const delToday=db.deliveries.filter(d=>d.end>state.now&&d.start<state.now+DAY).length;
+  const daysCover=(inv.physical/Math.max(inv.burn,1)).toFixed(1);
+  v.innerHTML=`
+  <div class="view-head">
+    <div><h1>Executive Command Center</h1><div class="sub">Houston Harbor bunker operations • enterprise view • ${fmtDay(state.now)}</div></div>
+    <div class="spacer"></div>
+    <span class="chip"><span class="dotp" style="background:var(--green)"></span> All systems nominal</span>
+    <button class="btn ghost sm" onclick="toast('Power BI','Opening executive semantic model…','ok')">⧉ Power BI</button>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(6,1fr)" id="execKpis"></div>
+  <div class="grid" style="grid-template-columns:1.6fr 1fr;margin-top:12px">
+    ${panel('Fleet Utilization — 14 day trend',`<div style="display:flex;gap:24px;align-items:center">
+      <div class="stat"><div class="l">Current</div><div class="v">${pct(fu,1)}</div><div class="d up">▲ 4.2% vs plan</div></div>
+      <div style="flex:1">${spark([71,73,72,76,74,78,80,79,82,81,83,82,84,fu],'var(--green)')}</div></div>
+      <div class="divider"></div>
+      <table class="tbl"><thead><tr><th>Barge</th><th>Util</th><th>Idle h</th><th>Charter/day</th><th>Status</th></tr></thead><tbody>
+      ${db.fleet.slice(0,5).map(b=>`<tr><td class="hl">${b.id} ${b.name}</td><td class="mono">${pct(b.util,0)}</td><td class="mono ${b.idle>24?'down':''}">${b.idle.toFixed(0)}</td><td class="mono">${money(b.charter)}</td><td>${statusPill(b.status)}</td></tr>`).join('')}
+      </tbody></table>`)}
+    ${panel('Top Operational Issues',db.alerts.filter(a=>a.sev!=='info').slice(0,5).map(a=>{
+      const c=a.sev==='crit'?'var(--red)':'var(--amber)';
+      return `<div style="display:flex;gap:9px;padding:7px 0;border-bottom:1px solid var(--line-soft)"><span class="dotp" style="background:${c};margin-top:5px"></span><div style="flex:1"><div class="hl" style="font-size:11.5px">${a.msg}</div><div class="mini">${a.src} • ${relTime(a.t)}</div></div></div>`;
+    }).join(''),'<span class="chip sm" style="color:var(--red)">'+db.alerts.filter(a=>a.sev==='crit').length+' critical</span>')}
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:12px">
+    ${panel('Enterprise Inventory Position',`
+      <div style="display:flex;gap:14px;align-items:center">
+        <div class="donut" style="--p:${(inv.commercialAvail/inv.physical*100).toFixed(0)};--accent:var(--cyan)"><div class="dc"><b>${fmt(inv.physical/1000,0)}k</b><span>Total MT</span></div></div>
+        <div style="flex:1">
+          <div class="kv"><span class="k">HOFTI (terminal)</span><span class="v">${mt(inv.hofti)}</span></div>
+          <div class="kv"><span class="k">Floating (fleet)</span><span class="v">${mt(inv.floating)}</span></div>
+          <div class="kv"><span class="k">Reserved</span><span class="v" style="color:var(--amber)">${mt(inv.reserved)}</span></div>
+          <div class="kv"><span class="k">Commercial available</span><span class="v" style="color:var(--green)">${mt(inv.commercialAvail)}</span></div>
+          <div class="kv"><span class="k">Days of cover</span><span class="v">${daysCover}d</span></div>
+        </div></div>`)}
+    ${panel('Charter Economics (daily)',`
+      <div class="kv"><span class="k">Fleet charter cost</span><span class="v">${money(db.fleet.reduce((s,b)=>s+b.charter,0))}</span></div>
+      <div class="kv"><span class="k">Idle charter cost</span><span class="v" style="color:var(--red)">${money(idleCost)}</span></div>
+      <div class="kv"><span class="k">Blended cost / MT</span><span class="v">$${(db.fleet.reduce((s,b)=>s+b.charter,0)/Math.max(inv.floating,1)*1000/1000).toFixed(2)}</span></div>
+      <div class="kv"><span class="k">Cost / delivery</span><span class="v">${money(db.fleet.reduce((s,b)=>s+b.charter,0)/Math.max(delToday,1))}</span></div>
+      <div class="kv"><span class="k">Demurrage exposure</span><span class="v" style="color:var(--green)">$0</span></div>
+      <div class="divider"></div>
+      <div class="mini">AI optimizer projects <span class="hl">$18,400/day</span> savings by re-balancing HH-207 & HH-208.</div>`)}
+    ${panel('Commercial Risk Radar',`
+      ${[['HOFTI MGO shortage','High','var(--red)',82],['Berth A congestion','Medium','var(--amber)',54],['Fog — Bolivar Roads','Medium','var(--amber)',48],['HH-207 under-utilization','Medium','var(--amber)',61],['Nomination SLA (D-118)','High','var(--red)',77]].map(([t,l,c,p])=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px"><span class="hl">${t}</span><span style="color:${c};font-weight:700">${l}</span></div>${barLine(p,c,5)}</div>`).join('')}`)}
+  </div>`;
+  updateExecKpis();
+};
+function updateExecKpis(){
+  const box=$('#execKpis'); if(!box)return;
+  const fu=db.fleet.reduce((s,b)=>s+b.util,0)/db.fleet.length;
+  const cu=db.fleet.filter(b=>!b.offhire).length/db.fleet.length*100;
+  const idleCost=db.fleet.filter(b=>b.util<70).reduce((s,b)=>s+b.charter*(1-b.util/100),0);
+  const delToday=db.deliveries.filter(d=>d.end>state.now&&d.start<state.now+DAY).length;
+  const cards=[
+    ['Fleet Utilization',pct(fu,1),'',{dir:'up',txt:'▲ 4.2%'}],
+    ['Charter Utilization',pct(cu,0),'',{dir:'up',txt:'▲ 1 barge'}],
+    ['Enterprise Inventory',fmt(inv.physical/1000,1),'kMT',{dir:'flat',txt:'stable'}],
+    ['Deliveries Today',String(delToday),'',{dir:'up',txt:'▲ 3'}],
+    ['Idle Charter Cost',moneyK(idleCost),'/day',{dir:'down',txt:'▼ target'}],
+    ['Active Nominations',String(db.nominations.filter(n=>n.status!=='Acknowledged').length),'',{dir:'flat',txt:db.nominations.filter(n=>n.status==='Revision Required').length+' rev'}],
+  ];
+  box.innerHTML=cards.map(([l,v,s,d])=>statCard(l,v,s,d)).join('');
+}
+
+/* =====================================================================
+   VIEW: FLEET BOARD
+   ===================================================================== */
+VIEWS.fleet=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Fleet Board</h1><div class="sub">${db.fleet.length} time-chartered bunker barges • live AIS positions & assignments</div></div>
+    <div class="spacer"></div>
+    <span class="chip"><span class="dotp" style="background:var(--green)"></span> ${db.fleet.filter(b=>!b.offhire).length} on-hire</span>
+    <span class="chip" style="color:var(--amber)">${db.fleet.filter(b=>b.idle>24).length} idle >24h</span>
+  </div>
+  <div class="grid" style="grid-template-columns:1.15fr .85fr;height:calc(100vh - 130px)">
+    <div class="panel" style="display:flex;flex-direction:column;overflow:hidden">
+      <div class="panel-h"><h3>Fleet Roster</h3><div class="spacer"></div><span class="mini">click a barge for detail</span></div>
+      <div style="overflow:auto;flex:1"><table class="tbl click" id="fleetTbl"><thead><tr>
+        <th>Barge</th><th>Status</th><th>Product</th><th>Onboard</th><th>Cust / Vessel</th><th>ETA</th><th>Util</th><th>Insp</th><th>Nom</th><th>Risk</th>
+      </tr></thead><tbody id="fleetBody"></tbody></table></div>
+    </div>
+    <div class="panel map-wrap" style="overflow:hidden">
+      <div class="panel-h" style="position:absolute;top:0;left:0;right:0;z-index:5;background:rgba(8,14,20,.7)"><h3>Houston Ship Channel — AIS</h3><div class="spacer"></div><span class="mini">live</span></div>
+      <canvas class="map-canvas" id="fleetMap"></canvas>
+      <div class="map-legend">
+        <div class="lg"><span class="dotp" style="background:var(--cyan)"></span> Bunker barge</div>
+        <div class="lg"><span class="dotp" style="background:var(--violet)"></span> HOFTI terminal</div>
+        <div class="lg"><span class="dotp" style="background:var(--amber)"></span> Customer vessel</div>
+      </div>
+    </div>
+  </div>`;
+  renderFleetBody();
+  setTimeout(()=>drawMap(),50);
+};
+function renderFleetBody(){
+  const body=$('#fleetBody'); if(!body)return;
+  body.innerHTML=db.fleet.map(b=>{
+    const nextDel=db.deliveries.filter(d=>d.barge===b.id&&d.end>state.now).sort((a,c)=>a.start-c.start)[0];
+    const rc=b.risk>60?'var(--red)':b.risk>35?'var(--amber)':'var(--green)';
+    return `<tr onclick='openBarge("${b.id}")'>
+      <td><div class="hl">${b.id}</div><div class="mini">${b.name}</div></td>
+      <td>${statusPill(b.status)}</td>
+      <td>${prodChip(b.product)}</td>
+      <td class="mono">${fmt(b.onboard)}<div class="mini">/ ${fmt(b.cap)} cap</div></td>
+      <td>${nextDel?`<div class="hl" style="font-size:11px">${nextDel.custName}</div><div class="mini">${nextDel.vessel}</div>`:'<span class="mini">—</span>'}</td>
+      <td class="mono" style="font-size:10.5px">${nextDel?fmtHM(nextDel.start):'—'}</td>
+      <td><div class="mono">${pct(b.util,0)}</div>${barLine(b.util,b.util>75?'var(--green)':'var(--amber)',4)}</td>
+      <td><span class="chip sm">${b.inspection}</span></td>
+      <td>${nextDel&&nextDel.nomination?`<span class="chip sm" style="color:var(--teal)">${nextDel.nomination}</span>`:'<span class="mini">—</span>'}</td>
+      <td><span class="mono" style="color:${rc};font-weight:700">${b.risk}</span></td>
+    </tr>`;
+  }).join('');
+}
+function openBarge(id){
+  const b=db.fleet.find(x=>x.id===id); if(!b)return;
+  const dels=db.deliveries.filter(d=>d.barge===id&&d.end>state.now-6*HOUR).sort((a,c)=>a.start-c.start);
+  const avail=b.cap-b.onboard;
+  openDrawer(`
+    <div class="cp-head"><div style="flex:1"><b style="font-size:15px;color:var(--txt-hi)">${b.id} — ${b.name}</b><div class="mini">${statusPill(b.status)} • ${prodChip(b.product)}</div></div><button class="icon-btn" onclick="closeDrawer()">✕</button></div>
+    <div class="cp-body">
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        ${statCard('Onboard',fmt(b.onboard),'MT')}${statCard('Available',fmt(avail),'MT')}
+        ${statCard('Committed',fmt(b.committed),'MT')}${statCard('Heel',fmt(b.heel),'MT')}
+      </div>
+      ${panel('Floating Inventory',`
+        <div class="kv"><span class="k">Capacity</span><span class="v">${mt(b.cap)}</span></div>
+        <div class="kv"><span class="k">Utilization</span><span class="v">${pct(b.util,1)}</span></div>
+        <div class="kv"><span class="k">Remaining capacity</span><span class="v">${mt(avail)}</span></div>
+        <div class="kv"><span class="k">Est. empty time</span><span class="v">${fmtHM(b.nextReload)}</span></div>
+        <div class="kv"><span class="k">Est. reload</span><span class="v">${untilTime(b.nextReload)}</span></div>
+        <div class="kv"><span class="k">Charter / day</span><span class="v">${money(b.charter)}</span></div>
+        <div class="kv"><span class="k">Idle hours (7d)</span><span class="v" style="color:${b.idle>24?'var(--red)':'var(--txt)'}">${b.idle.toFixed(1)}h</span></div>
+      `)}
+      ${panel('Assigned Deliveries',dels.length?dels.map(d=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line-soft)">
+        <div style="flex:1"><div class="hl" style="font-size:11px">${d.id} · ${d.custName}</div><div class="mini">${d.vessel} • ${d.berth}</div></div>
+        <div style="text-align:right"><div class="mono" style="font-size:11px">${mt(d.qty)}</div><div class="mini">${fmtHM(d.start)}</div></div></div>`).join(''):'<span class="mini">No upcoming deliveries</span>')}
+      <div class="row"><button class="btn primary" style="flex:1" onclick="go('sched');closeDrawer()">Open in Scheduler</button><button class="btn" onclick="Copilot.ask('Optimize assignment for ${b.id}')">✦ Optimize</button></div>
+    </div>`);
+}
+
+/* =====================================================================
+   VIEW: HOFTI TERMINAL
+   ===================================================================== */
+VIEWS.hofti=function(v){
+  const total=db.tanks.reduce((s,t)=>s+t.cur,0);
+  const cap=db.tanks.reduce((s,t)=>s+t.cap,0);
+  const queue=db.fleet.filter(b=>['Waiting to Load','Queue for Reload','Transit to HOFTI'].includes(b.status)).slice(0,5);
+  v.innerHTML=`
+  <div class="view-head"><div><h1>HOFTI Terminal Management</h1><div class="sub">Houston Oil Field Terminal — primary bunker storage & fleet reload point</div></div>
+    <div class="spacer"></div>
+    <span class="chip" style="color:var(--red)">1 tank below min</span>
+    <span class="chip"><span class="dotp" style="background:var(--amber)"></span> Berth A queue ${queue.length}</span>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(5,1fr)">
+    ${statCard('Total Inventory',fmt(total/1000,1),'kMT',{dir:'down',txt:'▼ burn 2.1k/d'})}
+    ${statCard('Working Inventory',fmt(db.tanks.reduce((s,t)=>s+t.working,0)/1000,0),'kMT')}
+    ${statCard('Available',fmt((total-db.tanks.reduce((s,t)=>s+t.reserved,0))/1000,1),'kMT',{dir:'flat',txt:'net of reserved'})}
+    ${statCard('Reserved',fmt(db.tanks.reduce((s,t)=>s+t.reserved,0)/1000,1),'kMT')}
+    ${statCard('Tank Utilization',pct(total/cap*100,0),'',{dir:'flat',txt:''})}
+  </div>
+  <div class="grid" style="grid-template-columns:1.5fr 1fr;margin-top:12px">
+    ${panel('Tank Farm — Live Levels',`<div class="tanks">${db.tanks.map(t=>{
+      const p=t.cur/t.cap*100, below=t.cur<t.min, col=PRODUCTS[t.product].color;
+      return `<div class="tank"><div class="cyl">
+        <div class="minl" style="bottom:${t.min/t.cap*100}%"></div>
+        <div class="fill" style="height:${p}%;background:linear-gradient(180deg,${col},${col}66)"></div>
+        </div><div class="nm">${t.id}${below?' ⚠':''}</div><div class="pd">${t.product}</div><div class="amt">${fmt(t.cur/1000,1)}k / ${fmt(t.cap/1000,0)}k</div></div>`;
+    }).join('')}</div>
+    <div class="divider"></div>
+    <div class="row wrap" style="gap:16px">
+      <div class="stat"><div class="l">Active Berth</div><div class="v" style="font-size:15px">Berth A <small>· ${queue[0]?queue[0].id:'idle'}</small></div></div>
+      <div class="stat"><div class="l">Loading Rate</div><div class="v" style="font-size:15px">${queue[0]?fmt(db.tanks[0].rate):'0'} <small>MT/hr</small></div></div>
+      <div class="stat"><div class="l">Avg Load Time</div><div class="v" style="font-size:15px">4.8 <small>hrs</small></div></div>
+      <div class="stat"><div class="l">Est. Completion</div><div class="v" style="font-size:15px">${fmtHM(state.now+3.2*HOUR)}</div></div>
+    </div>`)}
+    ${panel('Loading Queue',queue.length?queue.map((b,i)=>`<div style="display:flex;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-soft)">
+      <div style="width:24px;height:24px;border-radius:6px;background:var(--panel-3);display:grid;place-items:center;font-weight:700;color:${i===0?'var(--green)':'var(--txt-3)'}">${i===0?'▶':i}</div>
+      <div style="flex:1"><div class="hl" style="font-size:11.5px">${b.id} ${b.name}</div><div class="mini">${prodChip(b.product)} · reload ${fmt(b.cap-b.onboard)} MT</div></div>
+      <div style="text-align:right"><div class="mono" style="font-size:11px;color:${i===0?'var(--green)':'var(--amber)'}">${i===0?'LOADING':'wait '+(i*1.4).toFixed(1)+'h'}</div></div>
+    </div>`).join(''):'<span class="mini">Queue empty</span>',
+    '<span class="chip sm">2 berths</span>')}
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+    ${panel('Projected Inventory — 72h',`<canvas id="hoftiProj" height="150" style="width:100%"></canvas><div class="mini" style="margin-top:6px">Dashed = minimum operating level. Includes scheduled reloads (outflow) & confirmed replenishment cargo (inflow).</div>`)}
+    ${panel('Terminal Alerts & Movements',`
+      <div class="kv"><span class="k">Incoming replenishment</span><span class="v" style="color:var(--green)">+18,000 MT VLSFO · ${fmtHM(state.now+9*HOUR)}</span></div>
+      <div class="kv"><span class="k">Outgoing (next 24h)</span><span class="v" style="color:var(--amber)">-${fmt(inv.burn)} MT</span></div>
+      <div class="kv"><span class="k">Queue waiting time</span><span class="v">${(queue.length*1.4).toFixed(1)}h</span></div>
+      <div class="divider"></div>
+      <div style="display:flex;gap:9px;padding:6px 0"><span class="dotp" style="background:var(--red);margin-top:5px"></span><div class="mini"><b class="hl">T-07 MGO below minimum</b> — 11,000 MT vs 4,000 min. Replenishment or reduce MGO nominations.</div></div>
+      <div style="display:flex;gap:9px;padding:6px 0"><span class="dotp" style="background:var(--amber);margin-top:5px"></span><div class="mini"><b class="hl">Berth A congestion</b> — ${queue.length} in queue, projected ${(queue.length*1.4).toFixed(1)}h wait.</div></div>`)}
+  </div>`;
+  setTimeout(()=>drawHoftiProj(),50);
+};
+
+/* =====================================================================
+   VIEW: FLOATING INVENTORY
+   ===================================================================== */
+VIEWS.float=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Floating Inventory</h1><div class="sub">Every barge is floating inventory — onboard product, commitments & capacity</div></div>
+    <div class="spacer"></div>${statChip('Total floating',mt(inv.floating))}${statChip('Committed',mt(db.fleet.reduce((s,b)=>s+b.committed,0)))}
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+    ${PKEYS.map(p=>{const tot=inv.floatByBarge?Object.values(inv.floatByBarge):[];const amt=db.fleet.filter(b=>b.product===p).reduce((s,b)=>s+b.onboard,0);return amt>0?`<div class="panel"><div class="panel-b"><div class="stat"><div class="l">${prodChip(p)} afloat</div><div class="v">${fmt(amt/1000,1)}<small>kMT</small></div></div></div></div>`:'';}).filter(Boolean).join('')}
+  </div>
+  <div class="panel" style="margin-top:12px">
+    <div class="panel-h"><h3>Barge Inventory Detail</h3><div class="spacer"></div><span class="mini">supports multiple deliveries per load, partial deliveries, reservations & transfers</span></div>
+    <div style="overflow:auto"><table class="tbl click"><thead><tr>
+      <th>Barge</th><th>Product</th><th>Onboard</th><th>Committed</th><th>Available</th><th>Remaining cap</th><th>Heel</th><th>Rem. deliveries</th><th>Utilization</th><th>Est. empty</th><th>Rem. charter</th>
+    </tr></thead><tbody>
+    ${db.fleet.map(b=>{const avail=b.onboard-b.committed;const remDel=db.deliveries.filter(d=>d.barge===b.id&&d.start>state.now).length;return `<tr onclick='openBarge("${b.id}")'>
+      <td class="hl">${b.id}<div class="mini">${b.name}</div></td>
+      <td>${prodChip(b.product)}</td>
+      <td class="mono">${fmt(b.onboard)}</td>
+      <td class="mono" style="color:var(--amber)">${fmt(b.committed)}</td>
+      <td class="mono" style="color:var(--green)">${fmt(Math.max(0,avail))}</td>
+      <td class="mono">${fmt(b.cap-b.onboard)}</td>
+      <td class="mono">${fmt(b.heel)}</td>
+      <td class="mono">${remDel}</td>
+      <td style="min-width:90px"><div class="mono">${pct(b.onboard/b.cap*100,0)}</div>${barLine(b.onboard/b.cap*100,PRODUCTS[b.product].color,4)}</td>
+      <td class="mono" style="font-size:10.5px">${fmtHM(b.nextReload)}</td>
+      <td class="mono">${rint(6,42)}d</td>
+    </tr>`;}).join('')}
+    </tbody></table></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+    ${panel('Inventory Actions',`<div class="row wrap">
+      <button class="btn" onclick="toast('Reservation','Reserve inventory dialog','ok')">＋ Reserve inventory</button>
+      <button class="btn" onclick="toast('Transfer','Barge-to-barge transfer','ok')">⇄ Inventory transfer</button>
+      <button class="btn" onclick="toast('Partial delivery','Split delivery configured','ok')">◧ Partial delivery</button>
+      <button class="btn" onclick="go('sched')">▤ Rebalance in scheduler</button>
+    </div><div class="divider"></div><div class="mini">All calculations update automatically on delivery, reload, inspection or schedule change. Heel volume is excluded from commercial-available.</div>`)}
+    ${panel('Floating vs Committed by Barge',`${db.fleet.map(b=>`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:10.5px"><span class="hl">${b.id}</span><span class="mono">${fmt(b.onboard)} / ${fmt(b.committed)} cmt</span></div><div class="bar" style="height:7px"><i style="width:${b.onboard/b.cap*100}%;background:${PRODUCTS[b.product].color}"></i><i style="position:absolute;width:${b.committed/b.cap*100}%;background:repeating-linear-gradient(45deg,rgba(0,0,0,.3) 0 4px,transparent 4px 8px)"></i></div></div>`).join('')}`)}
+  </div>`;
+};
+function statChip(l,v){return `<span class="chip">${l}: <b class="hl">${v}</b></span>`;}
+
+/* =====================================================================
+   VIEW: ENTERPRISE INVENTORY ENGINE
+   ===================================================================== */
+VIEWS.inv=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Enterprise Inventory Engine</h1><div class="sub">Continuous multi-dimensional inventory — updates instantly on every operational event</div></div>
+    <div class="spacer"></div><span class="chip"><span class="dotp" style="background:var(--green)"></span> real-time · recalc ${state.tick}</span>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr)" id="invDims"></div>
+  <div class="grid" style="grid-template-columns:1.3fr 1fr;margin-top:12px">
+    ${panel('Inventory by Product',`<table class="tbl"><thead><tr><th>Product</th><th>HOFTI</th><th>Floating</th><th>Total</th><th>Share</th></tr></thead><tbody>
+      ${inv.byProd.map(r=>`<tr><td>${prodChip(r.p)} <span class="mini">${PRODUCTS[r.p].name}</span></td><td class="mono">${fmt(r.hofti)}</td><td class="mono">${fmt(r.floating)}</td><td class="mono hl">${fmt(r.total)}</td><td style="min-width:120px"><div class="bar" style="height:7px"><i style="width:${r.total/inv.physical*100}%;background:${PRODUCTS[r.p].color}"></i></div></td></tr>`).join('')}
+      <tr style="border-top:2px solid var(--line)"><td class="hl">TOTAL PHYSICAL</td><td class="mono">${fmt(inv.hofti)}</td><td class="mono">${fmt(inv.floating)}</td><td class="mono hl">${fmt(inv.physical)}</td><td></td></tr>
+    </tbody></table>`)}
+    ${panel('Inventory Ledger — recent movements',`<table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Product</th><th>Δ MT</th><th>Location</th></tr></thead><tbody id="ledgerBody"></tbody></table>`)}
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:12px">
+    ${panel('By Terminal / Location',`
+      <div class="kv"><span class="k">HOFTI terminal</span><span class="v">${mt(inv.hofti)}</span></div>
+      ${db.fleet.map(b=>`<div class="kv"><span class="k">${b.id} ${b.name}</span><span class="v">${mt(b.onboard)}</span></div>`).join('')}`)}
+    ${panel('By Customer (committed)',CUSTOMERS.map(c=>{const q=db.deliveries.filter(d=>d.customer===c.id&&d.start>state.now).reduce((s,d)=>s+d.qty,0);return q>0?`<div class="kv"><span class="k">${c.name}</span><span class="v">${mt(q)}</span></div>`:'';}).filter(Boolean).join(''))}
+    ${panel('By Delivery Window',`
+      <div class="kv"><span class="k">Next 24h</span><span class="v" style="color:var(--red)">${mt(db.deliveries.filter(d=>d.start>state.now&&d.start<state.now+DAY).reduce((s,d)=>s+d.qty,0))}</span></div>
+      <div class="kv"><span class="k">24–48h</span><span class="v">${mt(db.deliveries.filter(d=>d.start>state.now+DAY&&d.start<state.now+2*DAY).reduce((s,d)=>s+d.qty,0))}</span></div>
+      <div class="kv"><span class="k">48–72h</span><span class="v">${mt(db.deliveries.filter(d=>d.start>state.now+2*DAY&&d.start<state.now+3*DAY).reduce((s,d)=>s+d.qty,0))}</span></div>
+      <div class="kv"><span class="k">Uncommitted</span><span class="v" style="color:var(--green)">${mt(inv.uncommitted)}</span></div>
+      <div class="kv"><span class="k">Off-spec</span><span class="v" style="color:var(--red)">${mt(inv.offspec)}</span></div>`)}
+  </div>`;
+  updateInvDims(); updateLedger();
+};
+function updateInvDims(){
+  const box=$('#invDims'); if(!box)return;
+  const dims=[['Physical',inv.physical,'var(--cyan)','Total across HOFTI + fleet'],['Floating',inv.floating,'var(--teal)','On-barge inventory'],['HOFTI',inv.hofti,'var(--violet)','Terminal storage'],['Reserved',inv.reserved,'var(--amber)','Held for commitments'],['Committed',inv.committed,'var(--orange)','Scheduled deliveries'],['Commercial Available',inv.commercialAvail,'var(--green)','Free to sell']];
+  box.innerHTML=dims.map(([l,val,c,sub])=>`<div class="panel"><div class="panel-b"><div class="stat"><div class="l">${l}</div><div class="v" style="color:${c}">${fmt(val)}<small>MT</small></div><div class="mini">${sub}</div></div></div></div>`).join('');
+}
+function updateLedger(){
+  const b=$('#ledgerBody'); if(!b)return;
+  if(!db._ledger)db._ledger=[];
+  const rows=db._ledger.slice(0,9).map(m=>`<tr class="${m.fresh?'flash':''}"><td class="mono" style="font-size:10px">${fmtClock(m.t)}</td><td><span class="chip sm" style="color:${m.d>0?'var(--green)':'var(--amber)'}">${m.type}</span></td><td>${prodChip(m.p)}</td><td class="mono" style="color:${m.d>0?'var(--green)':'var(--red)'}">${m.d>0?'+':''}${fmt(m.d)}</td><td class="mini">${m.loc}</td></tr>`).join('');
+  b.innerHTML=rows||'<tr><td colspan="5" class="mini">Awaiting movements…</td></tr>';
+  db._ledger.forEach(m=>m.fresh=false);
+}
+
+/* =====================================================================
+   VIEW: BLENDER CONTROL CENTER
+   ===================================================================== */
+VIEWS.blender=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Blender Control Center</h1><div class="sub">Continuous enterprise inventory view — where it is, how much is committed, what remains available</div></div>
+    <div class="spacer"></div><span class="chip"><span class="dotp" style="background:var(--green)"></span> live projection engine</span>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+    ${statCard('Enterprise Inventory',fmt(inv.physical/1000,1),'kMT',{dir:'down',txt:'burn '+fmt(inv.burn)+'/d'})}
+    ${statCard('Commercial Available',fmt(inv.commercialAvail/1000,1),'kMT',{dir:'up',txt:'free to sell'})}
+    ${statCard('Safety Inventory',fmt(db.tanks.reduce((s,t)=>s+t.min,0)/1000,1),'kMT',{dir:'flat',txt:'min operating'})}
+    ${statCard('Burn Rate',fmt(inv.burn/24,0),'MT/hr',{dir:'flat',txt:'24h avg'})}
+  </div>
+  <div class="grid" style="grid-template-columns:1.4fr 1fr;margin-top:12px">
+    ${panel('Enterprise Inventory Waterfall',`<div class="wf">
+      ${[['Physical',inv.physical,'var(--cyan)'],['− Reserved',-inv.reserved,'var(--amber)'],['− Committed',-inv.committed,'var(--orange)'],['− Safety',-db.tanks.reduce((s,t)=>s+t.min,0),'var(--red)'],['= Available',inv.commercialAvail,'var(--green)']].map(([l,val,c])=>{const mx=inv.physical;const h=Math.abs(val)/mx*100;return `<div class="col"><div class="val">${fmt(Math.abs(val)/1000,1)}k</div><div class="bar2" style="height:${clamp(h,3,100)}%;background:${c}"></div><div class="lab">${l}</div></div>`;}).join('')}
+    </div>`)}
+    ${panel('Inventory by Product — commercial available',inv.byProd.map(r=>{const committed=db.deliveries.filter(d=>d.product===r.p&&d.start>state.now&&d.start<state.now+3*DAY).reduce((s,d)=>s+d.qty,0);const av=Math.max(0,r.total-committed);return `<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:11px"><span>${prodChip(r.p)}</span><span class="mono">avail <b class="hl" style="color:var(--green)">${fmt(av)}</b> / ${fmt(r.total)}</span></div><div class="bar" style="height:8px"><i style="width:${r.total?av/r.total*100:0}%;background:${PRODUCTS[r.p].color}"></i></div></div>`;}).join(''))}
+  </div>
+  <div class="panel" style="margin-top:12px">
+    <div class="panel-h"><h3>Hourly Inventory Projection — 24h / 48h / 72h</h3><div class="spacer"></div>
+      <span class="chip sm" style="color:var(--red)">shortage forecast: T-07 MGO in ${rint(8,16)}h</span></div>
+    <div class="panel-b"><canvas id="blendProj" height="200" style="width:100%"></canvas>
+    <div class="row" style="margin-top:10px;gap:20px">
+      <span class="mini"><span class="dotp" style="background:var(--cyan)"></span> Enterprise</span>
+      <span class="mini"><span class="dotp" style="background:var(--teal)"></span> Floating</span>
+      <span class="mini"><span class="dotp" style="background:var(--violet)"></span> HOFTI</span>
+      <span class="mini"><span class="dotp" style="background:var(--amber);"></span> Safety min</span>
+      <span class="mini"><span class="dotp" style="background:var(--green)"></span> Commercial available</span>
+    </div></div>
+  </div>`;
+  setTimeout(()=>drawBlendProj(),50);
+};
+</script>
+
+<script>
+/* =====================================================================
+   CANVAS CHARTS
+   ===================================================================== */
+function ctxSetup(id){const c=$('#'+id);if(!c)return null;const r=c.getBoundingClientRect();const dpr=window.devicePixelRatio||1;c.width=r.width*dpr;c.height=(c.height||150)*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);return {x,w:r.width,h:c.height/dpr};}
+function lineSeries(x,w,h,series,opts={}){
+  const pad={l:44,r:10,t:12,b:18};const iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+  const all=series.flatMap(s=>s.data);const mn=opts.min!=null?opts.min:Math.min(...all)*.96;const mx=Math.max(...all)*1.04;
+  x.strokeStyle='#1b2634';x.lineWidth=1;x.fillStyle='#5d7186';x.font='9px ui-monospace';
+  for(let i=0;i<=4;i++){const yy=pad.t+ih*i/4;x.beginPath();x.moveTo(pad.l,yy);x.lineTo(w-pad.r,yy);x.stroke();const val=mx-(mx-mn)*i/4;x.fillText(fmt(val/1000,0)+'k',4,yy+3);}
+  const N=series[0].data.length;
+  series.forEach(s=>{
+    x.strokeStyle=s.color;x.lineWidth=s.w||2;x.beginPath();
+    s.data.forEach((d,i)=>{const px=pad.l+iw*i/(N-1);const py=pad.t+ih-(d-mn)/(mx-mn)*ih;i?x.lineTo(px,py):x.moveTo(px,py);});
+    if(s.dash){x.setLineDash([4,4]);}x.stroke();x.setLineDash([]);
+    if(s.fill){x.lineTo(pad.l+iw,pad.t+ih);x.lineTo(pad.l,pad.t+ih);x.closePath();const g=x.createLinearGradient(0,pad.t,0,pad.t+ih);g.addColorStop(0,s.color+'33');g.addColorStop(1,s.color+'00');x.fillStyle=g;x.fill();}
+  });
+  if(opts.nowFrac!=null){const nx=pad.l+iw*opts.nowFrac;x.strokeStyle='#f8717188';x.setLineDash([3,3]);x.beginPath();x.moveTo(nx,pad.t);x.lineTo(nx,pad.t+ih);x.stroke();x.setLineDash([]);}
+}
+function drawHoftiProj(){const s=ctxSetup('hoftiProj');if(!s)return;const base=inv.hofti;const data=[],mind=[];let cur=base;for(let i=0;i<=72;i+=2){cur-=rnd(150,650);if(i===18)cur+=18000;data.push(Math.max(cur,8000));mind.push(db.tanks.reduce((a,t)=>a+t.min,0));}lineSeries(s.x,s.w,s.h,[{data,color:'#22d3ee',fill:true},{data:mind,color:'#fbbf24',dash:true}]);}
+function drawBlendProj(){const s=ctxSetup('blendProj');if(!s)return;const ent=[],flt=[],hof=[],saf=[],av=[];let e=inv.physical,f=inv.floating,ho=inv.hofti;for(let i=0;i<=72;i+=1){const burn=inv.burn/24;e-=burn*rnd(.85,1.15);f-=burn*.55*rnd(.8,1.2);ho-=burn*.45*rnd(.8,1.2);if(i===9){ho+=18000;e+=18000;}if(i===30){f+=6000;e+=6000;}ent.push(Math.max(e,0));flt.push(Math.max(f,0));hof.push(Math.max(ho,0));saf.push(db.tanks.reduce((a,t)=>a+t.min,0));av.push(Math.max(e-inv.reserved,0));}lineSeries(s.x,s.w,s.h,[{data:ent,color:'#22d3ee',fill:true,w:2.4},{data:flt,color:'#2dd4bf'},{data:hof,color:'#a78bfa'},{data:av,color:'#34d399'},{data:saf,color:'#fbbf24',dash:true}]);}
+
+/* =====================================================================
+   HARBOR MAP (canvas)
+   ===================================================================== */
+let mapAnim=null;
+function drawMap(){
+  const c=$('#fleetMap');if(!c)return;const wrap=c.parentElement.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;c.width=wrap.width*dpr;c.height=wrap.height*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);
+  const W=wrap.width,H=wrap.height;
+  function frame(){
+    x.clearRect(0,0,W,H);
+    // water
+    x.fillStyle='#050a12';x.fillRect(0,0,W,H);
+    // grid
+    x.strokeStyle='rgba(34,211,238,.05)';x.lineWidth=1;
+    for(let i=0;i<W;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke();}
+    for(let i=0;i<H;i+=40){x.beginPath();x.moveTo(0,i);x.lineTo(W,i);x.stroke();}
+    // channel path (buffalo bayou -> galveston)
+    x.strokeStyle='rgba(96,165,250,.25)';x.lineWidth=22;x.lineCap='round';x.beginPath();
+    x.moveTo(.15*W,.30*H);x.quadraticCurveTo(.45*W,.5*H,.9*H/H*.9*W,.85*H);x.stroke();
+    x.strokeStyle='rgba(96,165,250,.5)';x.lineWidth=1.5;x.setLineDash([6,6]);x.beginPath();x.moveTo(.15*W,.30*H);x.quadraticCurveTo(.45*W,.5*H,.9*W,.85*H);x.stroke();x.setLineDash([]);
+    // HOFTI
+    const hx=HOFTI_POS.x*W,hy=HOFTI_POS.y*H;
+    x.fillStyle='#a78bfa';x.beginPath();x.arc(hx,hy,7,0,7);x.fill();
+    x.strokeStyle='#a78bfa55';x.beginPath();x.arc(hx,hy,7+6*Math.abs(Math.sin(Date.now()/600)),0,7);x.stroke();
+    x.fillStyle='#c4b5fd';x.font='700 10px Inter';x.fillText('HOFTI',hx+11,hy+3);
+    // customer berths
+    x.fillStyle='#fbbf2444';x.font='8px ui-monospace';
+    Object.entries(HARBOR_POINTS).forEach(([n,p])=>{x.fillStyle='#fbbf24';x.beginPath();x.arc(p.x*W,p.y*H,2.5,0,7);x.fill();x.fillStyle='#8fa3b8';x.fillText(n.split(' ')[0],p.x*W+5,p.y*H+2);});
+    // barges
+    db.fleet.forEach(b=>{
+      b.px+=Math.cos(b.heading*Math.PI/180)*0.0004*(b.status.includes('Transit')?1:.1);
+      b.py+=Math.sin(b.heading*Math.PI/180)*0.0004*(b.status.includes('Transit')?1:.1);
+      if(b.px<.1||b.px>.95)b.heading=180-b.heading; if(b.py<.15||b.py>.9)b.heading=-b.heading;
+      b.px=clamp(b.px,.1,.95);b.py=clamp(b.py,.15,.9);
+      const bx=b.px*W,by=b.py*H;const col=PRODUCTS[b.product].color;
+      x.save();x.translate(bx,by);x.rotate(b.heading*Math.PI/180);
+      x.fillStyle=col;x.strokeStyle='#000';x.lineWidth=.5;
+      x.beginPath();x.moveTo(6,0);x.lineTo(-4,3);x.lineTo(-4,-3);x.closePath();x.fill();x.stroke();
+      x.restore();
+      x.fillStyle='#dbe4ee';x.font='700 8px ui-monospace';x.fillText(b.id,bx+7,by-4);
+      if(b.status.includes('Transit')){x.strokeStyle=col+'55';x.setLineDash([2,3]);x.beginPath();x.moveTo(bx,by);x.lineTo(hx,hy);x.stroke();x.setLineDash([]);}
+    });
+    mapAnim=requestAnimationFrame(frame);
+  }
+  if(mapAnim)cancelAnimationFrame(mapAnim);
+  frame();
+}
+</script>
+<script>
+/* =====================================================================
+   VIEW: FLEET SCHEDULER — airline-style dispatch board w/ drag & drop
+   ===================================================================== */
+const SCHED={cfg:{day:{span:DAY,cell:HOUR,cw:70,lbl:t=>fmtHM(t)},week:{span:7*DAY,cell:6*HOUR,cw:52,lbl:t=>fmtDay(t).slice(0,3)+' '+fmtHM(t)},'14day':{span:14*DAY,cell:12*HOUR,cw:46,lbl:t=>fmtDay(t).slice(0,6)}}};
+function schedViewStart(){const c=SCHED.cfg[state.schedView];return Math.floor((state.now-2*HOUR)/c.cell)*c.cell;}
+VIEWS.sched=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Fleet Scheduler</h1><div class="sub">Airline-style dispatch board — drag to reassign, edges to resize · every change propagates downstream</div></div>
+    <div class="spacer"></div>
+    <div class="seg" id="schedSeg">
+      <button data-sv="day" class="${state.schedView==='day'?'on':''}" onclick="setSchedView('day')">Daily</button>
+      <button data-sv="week" class="${state.schedView==='week'?'on':''}" onclick="setSchedView('week')">Weekly</button>
+      <button data-sv="14day" class="${state.schedView==='14day'?'on':''}" onclick="setSchedView('14day')">14-Day</button>
+    </div>
+  </div>
+  <div class="sched-wrap">
+    <div class="sched-toolbar">
+      <button class="btn sm" id="undoBtn" onclick="schedUndo()">↶ Undo</button>
+      <button class="btn sm" id="redoBtn" onclick="schedRedo()">↷ Redo</button>
+      <div style="width:1px;height:20px;background:var(--line)"></div>
+      <button class="btn sm" onclick="detectConflicts(true)">⚠ Detect conflicts</button>
+      <button class="btn sm" onclick="toggleLockAll()">🔒 Lock confirmed</button>
+      <div class="spacer"></div>
+      <span class="chip sm" id="conflictChip"><span class="dotp" style="background:var(--green)"></span> 0 conflicts</span>
+      <span class="chip sm" id="pubChip" style="color:var(--green)">● Published v2.41</span>
+      <button class="btn primary sm" onclick="publishSchedule()">⤴ Publish schedule</button>
+    </div>
+    <div class="sched-scroll" id="schedScroll"><div class="sched-grid" id="schedGrid"></div></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+    ${panel('AI Dispatch Recommendations',`<div id="schedRecs"></div>`,'<span class="chip sm" style="color:var(--accent)">✦ live</span>')}
+    ${panel('Legend & Shortcuts',`<div class="row wrap" style="gap:14px">
+      <div><div class="mini" style="margin-bottom:5px">Delivery status</div>${['Scheduled','Nominated','Confirmed','Loading','Bunkering'].map(s=>`<span class="chip sm" style="margin:2px">${statusPill(s)}</span>`).join('')}</div>
+    </div><div class="divider"></div>
+    <div class="mini">Drag a block between barge lanes to reassign · drag horizontally to reschedule · drag left/right edges to resize · 🔒 blocks are locked. Conflicts (overlap on same barge) flash red. Every move recalculates transit, loading, inventory, idle time & commercial impact and re-checks nominations.</div>`)}
+  </div>`;
+  buildSched(); renderSchedRecs();
+};
+function setSchedView(sv){state.schedView=sv;$$('#schedSeg button').forEach(b=>b.classList.toggle('on',b.dataset.sv===sv));buildSched();}
+function buildSched(){
+  const grid=$('#schedGrid');if(!grid)return;
+  const c=SCHED.cfg[state.schedView];const vs=schedViewStart();const ve=vs+c.span;
+  const nCells=Math.round(c.span/c.cell);const trackW=nCells*c.cw;
+  grid.style.minWidth=(150+trackW)+'px';
+  // time header
+  let th=`<div class="sched-timehead"><div class="corner">Barge / ${state.schedView}</div><div class="th-track" style="width:${trackW}px">`;
+  for(let i=0;i<nCells;i++){th+=`<div class="th-cell" style="width:${c.cw}px">${c.lbl(vs+i*c.cell)}</div>`;}
+  th+='</div></div>';
+  // lanes
+  let lanes='';
+  db.fleet.forEach(b=>{
+    const util=pct(b.util,0);
+    lanes+=`<div class="lane" data-barge="${b.id}"><div class="lane-head">
+      <div class="bn"><span class="dotp" style="background:${PRODUCTS[b.product].color}"></span>${b.id}</div>
+      <div class="bs">${b.name} · ${util}${b.offhire?' · <span style="color:var(--red)">off-hire</span>':''}</div>
+    </div><div class="lane-track" data-barge="${b.id}" style="width:${trackW}px">`;
+    // gridlines
+    for(let i=1;i<nCells;i++)lanes+=`<div class="gl" style="left:${i*c.cw}px"></div>`;
+    lanes+='</div></div>';
+  });
+  grid.innerHTML=th+lanes;
+  // now line + hofti markers
+  const pxPerMs=trackW/c.span;
+  const tracks=$$('#schedGrid .lane-track');
+  // blocks
+  db.deliveries.forEach(d=>{
+    if(d.end<vs||d.start>ve)return;
+    const track=grid.querySelector(`.lane-track[data-barge="${d.barge}"]`);if(!track)return;
+    const left=(d.start-vs)*pxPerMs;const width=Math.max((d.end-d.start)*pxPerMs,26);
+    const col=STATUS_COLOR[d.status]||'#22d3ee';
+    const blk=el('div',{class:'blk'+(d.locked?' locked':''),'data-id':d.id,style:{left:left+'px',width:width+'px',background:`linear-gradient(135deg,${col}dd,${col}99)`}});
+    blk.innerHTML=`<div class="rz l"></div><div class="bt">${d.id} · ${d.custName}</div><div class="bd">${fmt(d.qty)} MT ${d.product} · ${fmtHM(d.start)}</div><div class="rz r"></div>`;
+    blk.addEventListener('pointerdown',e=>startDrag(e,d,blk));
+    blk.addEventListener('click',e=>{if(!blk._moved){e.stopPropagation();openDelivery(d.id);}});
+    track.append(blk);
+  });
+  // now line
+  const nowFrac=(state.now-vs)/c.span;
+  if(nowFrac>0&&nowFrac<1){tracks.forEach(t=>{});const nl=el('div',{class:'now-line',style:{left:(150+nowFrac*trackW)+'px'}});grid.append(nl);}
+  detectConflicts(false);
+  updateUndoRedo();
+}
+/* ---- drag / resize ---- */
+let drag=null;
+function startDrag(e,d,blk){
+  if(d.locked){toast('Locked','Delivery '+d.id+' is locked. Unlock to move.','warn');return;}
+  const rz=e.target.classList.contains('rz');const side=e.target.classList.contains('l')?'l':e.target.classList.contains('r')?'r':null;
+  const c=SCHED.cfg[state.schedView];const vs=schedViewStart();const trackW=Math.round(c.span/c.cell)*c.cw;const pxPerMs=trackW/c.span;
+  drag={d,blk,mode:rz?'resize':'move',side,startX:e.clientX,startY:e.clientY,origStart:d.start,origEnd:d.end,origBarge:d.barge,pxPerMs,vs,moved:false};
+  blk.classList.add('dragging');
+  blk._moved=false;
+  // listen on window so re-parenting between lanes doesn't drop the drag
+  window.addEventListener('pointermove',onDrag);
+  window.addEventListener('pointerup',endDrag);
+  e.preventDefault();
+}
+function onDrag(e){
+  if(!drag)return;const {d,blk,pxPerMs}=drag;const dx=e.clientX-drag.startX;const dms=dx/pxPerMs;
+  if(Math.abs(dx)>3||Math.abs(e.clientY-drag.startY)>3){drag.moved=true;blk._moved=true;}
+  const snap=15*MIN;
+  if(drag.mode==='move'){
+    let ns=Math.round((drag.origStart+dms)/snap)*snap;const dur=drag.origEnd-drag.origStart;
+    d.start=ns;d.end=ns+dur;
+    // lane change
+    const lane=document.elementsFromPoint(e.clientX,e.clientY).find(el=>el.classList&&el.classList.contains('lane-track'));
+    if(lane&&lane.dataset.barge!==d.barge){d.barge=lane.dataset.barge;}
+  }else{
+    if(drag.side==='r'){let ne=Math.round((drag.origEnd+dms)/snap)*snap;d.end=Math.max(ne,d.start+30*MIN);}
+    else{let ns=Math.round((drag.origStart+dms)/snap)*snap;d.start=Math.min(ns,d.end-30*MIN);}
+  }
+  // live reposition (cheap: rebuild just this block's geometry)
+  const left=(d.start-drag.vs)*pxPerMs;const width=Math.max((d.end-d.start)*pxPerMs,26);
+  blk.style.left=left+'px';blk.style.width=width+'px';
+  const bt=blk.querySelector('.bt'),bd=blk.querySelector('.bd');
+  if(bd)bd.textContent=`${fmt(d.qty)} MT ${d.product} · ${fmtHM(d.start)}`;
+  // move to correct lane DOM if changed
+  const curLane=blk.parentElement;
+  if(curLane.dataset.barge!==d.barge){const nl=$(`#schedGrid .lane-track[data-barge="${d.barge}"]`);if(nl)nl.append(blk);}
+}
+function endDrag(e){
+  if(!drag)return;const {d,blk}=drag;blk.classList.remove('dragging');
+  window.removeEventListener('pointermove',onDrag);window.removeEventListener('pointerup',endDrag);
+  if(drag.moved && (d.start!==drag.origStart||d.barge!==drag.origBarge||d.end!==drag.origEnd)){
+    pushUndo({id:d.id,start:drag.origStart,end:drag.origEnd,barge:drag.origBarge});
+    onScheduleChange(d,drag.origBarge);
+  }
+  setTimeout(()=>{blk._moved=false;},50);
+  drag=null;
+}
+function onScheduleChange(d,fromBarge){
+  recomputeAll();
+  const moved=fromBarge!==d.barge;
+  detectConflicts(false);
+  // AI recommendation flavor
+  const idleDelta=(rnd(1.2,4.1)).toFixed(1);const utilDelta=(rnd(3,9)).toFixed(0);
+  markUnpublished();
+  // nomination re-check
+  if(d.nomination){const nom=db.nominations.find(n=>n.id===d.nomination);if(nom&&nom.status==='Sent'){nom.status='Revision Required';nom.revisions++;toast('Nomination revision','Schedule change → '+nom.id+' flagged for revised nomination','warn');}}
+  logAudit(ROLES[state.role].name,`moved ${d.id} ${moved?'to '+d.barge:'in time'}`);
+  if(moved)toast('Reassigned · AI',`${d.id} → ${d.barge}. Idle −${idleDelta}h · fleet utilization +${utilDelta}% · transit/loading recalculated.`,'ok');
+  else toast('Rescheduled',`${d.id} moved to ${fmtHM(d.start)} · downstream systems updated.`,'ok');
+  renderSchedRecs(); updateTopKpis();
+}
+function detectConflicts(announce){
+  let conflicts=0;const byBarge={};
+  db.deliveries.forEach(d=>{(byBarge[d.barge]=byBarge[d.barge]||[]).push(d);});
+  $$('#schedGrid .blk').forEach(b=>b.classList.remove('conflict'));
+  for(const bid in byBarge){
+    const arr=byBarge[bid].sort((a,b)=>a.start-b.start);
+    for(let i=1;i<arr.length;i++){if(arr[i].start<arr[i-1].end){conflicts++;[arr[i],arr[i-1]].forEach(d=>{const el=$(`#schedGrid .blk[data-id="${d.id}"]`);if(el)el.classList.add('conflict');});}}
+  }
+  const chip=$('#conflictChip');if(chip)chip.innerHTML=`<span class="dotp" style="background:${conflicts?'var(--red)':'var(--green)'}"></span> ${conflicts} conflict${conflicts!==1?'s':''}`;
+  if(announce)toast(conflicts?'Conflicts detected':'No conflicts',conflicts?conflicts+' overlapping assignment(s) flagged in red':'Schedule is clean across all lanes',conflicts?'crit':'ok');
+  return conflicts;
+}
+function pushUndo(snap){state.undo.push(snap);if(state.undo.length>50)state.undo.shift();state.redo=[];updateUndoRedo();}
+function schedUndo(){if(!state.undo.length)return;const s=state.undo.pop();const d=db.deliveries.find(x=>x.id===s.id);state.redo.push({id:d.id,start:d.start,end:d.end,barge:d.barge});Object.assign(d,{start:s.start,end:s.end,barge:s.barge});recomputeAll();buildSched();toast('Undo','Reverted '+d.id,'');updateUndoRedo();}
+function schedRedo(){if(!state.redo.length)return;const s=state.redo.pop();const d=db.deliveries.find(x=>x.id===s.id);state.undo.push({id:d.id,start:d.start,end:d.end,barge:d.barge});Object.assign(d,{start:s.start,end:s.end,barge:s.barge});recomputeAll();buildSched();toast('Redo','Re-applied '+d.id,'');updateUndoRedo();}
+function updateUndoRedo(){const u=$('#undoBtn'),r=$('#redoBtn');if(u)u.disabled=!state.undo.length;if(r)r.disabled=!state.redo.length;}
+function toggleLockAll(){const confirmed=db.deliveries.filter(d=>['Confirmed','Nominated','Loading','Bunkering'].includes(d.status));confirmed.forEach(d=>d.locked=true);buildSched();toast('Locked',confirmed.length+' confirmed deliveries locked','ok');}
+function markUnpublished(){state.published=false;const c=$('#pubChip');if(c){c.style.color='var(--amber)';c.innerHTML='● Unpublished changes';}}
+function publishSchedule(){state.published=true;const c=$('#pubChip');if(c){c.style.color='var(--green)';const v='2.'+(42+Math.floor(rnd(0,9)));c.innerHTML='● Published v'+v;}toast('Schedule published','All downstream systems notified · nominations re-validated · Power BI refreshed','ok');logAudit(ROLES[state.role].name,'published schedule');}
+function renderSchedRecs(){
+  const box=$('#schedRecs');if(!box)return;
+  const idle=db.fleet.filter(b=>b.idle>20).sort((a,b)=>b.idle-a.idle).slice(0,3);
+  const recs=[
+    idle[0]?[`Reassign next Bayport stem to ${idle[0].id}`,`${idle[0].id} idle ${idle[0].idle.toFixed(0)}h — reduces idle by 3.1h, fleet utilization +8%`,'var(--green)']:null,
+    ['Sequence HH-205 reload before 14:00',`Avoids Berth A congestion window (${(db.fleet.filter(b=>b.status.includes('Load')).length)} in queue) — saves ~1.4h wait`,'var(--cyan)'],
+    ['Consolidate D-114 + D-117 on HH-206',`Same customer & product — one load covers both, frees HH-203 for spot demand`,'var(--violet)'],
+  ].filter(Boolean);
+  box.innerHTML=recs.map(([t,d,c])=>`<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line-soft)">
+    <span style="color:${c}">✦</span><div style="flex:1"><div class="hl" style="font-size:11.5px">${t}</div><div class="mini">${d}</div></div>
+    <button class="btn sm ghost" onclick="toast('Applied','AI recommendation accepted & scheduled','ok');markUnpublished()">Apply</button></div>`).join('');
+}
+function openDelivery(id){
+  const d=db.deliveries.find(x=>x.id===id);if(!d)return;const b=db.fleet.find(x=>x.id===d.barge);
+  const nom=d.nomination?db.nominations.find(n=>n.id===d.nomination):null;
+  openModal(`Delivery ${d.id}`,`
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="kv"><span class="k">Customer</span><span class="v">${d.custName}</span></div>
+      <div class="kv"><span class="k">Vessel</span><span class="v">${d.vessel}</span></div>
+      <div class="kv"><span class="k">Barge</span><span class="v">${d.barge} ${b?b.name:''}</span></div>
+      <div class="kv"><span class="k">Product</span><span class="v">${d.product}</span></div>
+      <div class="kv"><span class="k">Quantity</span><span class="v">${mt(d.qty)}</span></div>
+      <div class="kv"><span class="k">Berth</span><span class="v">${d.berth}</span></div>
+      <div class="kv"><span class="k">Window start</span><span class="v">${fmtDay(d.start)} ${fmtHM(d.start)}</span></div>
+      <div class="kv"><span class="k">Window end</span><span class="v">${fmtHM(d.end)}</span></div>
+      <div class="kv"><span class="k">Status</span><span class="v">${statusPill(d.status)}</span></div>
+      <div class="kv"><span class="k">Nomination lead</span><span class="v">${d.lead}h</span></div>
+      <div class="kv"><span class="k">Inspection</span><span class="v">${d.inspection}</span></div>
+      <div class="kv"><span class="k">Nomination</span><span class="v">${nom?nom.id+' · '+nom.status:'—'}</span></div>
+    </div>`,
+    `<button class="btn ${d.locked?'':'ghost'}" onclick="toggleLock('${d.id}')">${d.locked?'🔒 Unlock':'🔓 Lock'}</button>
+     <button class="btn" onclick="Copilot.ask('Optimize delivery ${d.id}')">✦ Optimize</button>
+     ${nom?`<button class="btn primary" onclick="go('noms');closeModal()">Open nomination</button>`:`<button class="btn primary" onclick="draftNomination('${d.id}')">Draft nomination</button>`}`);
+}
+function toggleLock(id){const d=db.deliveries.find(x=>x.id===id);d.locked=!d.locked;buildSched();closeModal();toast(d.locked?'Locked':'Unlocked',d.id,'');}
+
+/* =====================================================================
+   VIEW: NOMINATIONS (Buffalo Marine)
+   ===================================================================== */
+VIEWS.noms=function(v){
+  const upcoming=db.deliveries.filter(d=>d.start>state.now&&d.start<state.now+3*DAY).sort((a,b)=>a.start-b.start);
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Delivery Nomination Management</h1><div class="sub">Buffalo Marine nomination workflow — auto-drafted from schedule, lead-time monitored</div></div>
+    <div class="spacer"></div>
+    <span class="chip" style="color:var(--amber)">${db.nominations.filter(n=>n.status==='Draft Ready').length} drafts ready</span>
+    <span class="chip" style="color:var(--red)">${db.nominations.filter(n=>n.status==='Revision Required').length} need revision</span>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr 1fr">
+    ${['Draft Ready','Sent','Acknowledged','Revision Required'].map(s=>{const n=db.nominations.filter(x=>x.status===s).length;const c={'Draft Ready':'var(--cyan)','Sent':'var(--teal)','Acknowledged':'var(--green)','Revision Required':'var(--red)'}[s];return `<div class="panel"><div class="panel-b"><div class="stat"><div class="l">${s}</div><div class="v" style="color:${c}">${n}</div></div></div></div>`;}).join('')}
+  </div>
+  <div class="panel" style="margin-top:12px">
+    <div class="panel-h"><h3>Nomination Deadline Monitor</h3><div class="spacer"></div><span class="mini">lead times configurable per customer/contract (6 / 12 / 24 / 48h)</span></div>
+    <div style="overflow:auto"><table class="tbl click"><thead><tr>
+      <th>Delivery</th><th>Customer / Vessel</th><th>Barge</th><th>Product</th><th>Qty</th><th>Window</th><th>Lead</th><th>Deadline</th><th>Nomination</th><th></th>
+    </tr></thead><tbody>
+    ${upcoming.map(d=>{const dl=d.start-d.lead*HOUR;const urgent=dl-state.now<2*HOUR;const nom=d.nomination?db.nominations.find(n=>n.id===d.nomination):null;
+      return `<tr onclick='openDelivery("${d.id}")'>
+      <td class="hl">${d.id}</td>
+      <td><div style="font-size:11px">${d.custName}</div><div class="mini">${d.vessel}</div></td>
+      <td>${d.barge}</td><td>${prodChip(d.product)}</td><td class="mono">${fmt(d.qty)}</td>
+      <td class="mono" style="font-size:10.5px">${fmtDay(d.start).slice(0,6)} ${fmtHM(d.start)}</td>
+      <td class="mono">${d.lead}h</td>
+      <td class="mono" style="color:${urgent?'var(--red)':'var(--txt-2)'}">${untilTime(dl)}</td>
+      <td>${nom?`<span class="chip sm" style="color:${nom.status==='Revision Required'?'var(--red)':'var(--teal)'}">${nom.id} · ${nom.status}</span>`:'<span class="mini">—</span>'}</td>
+      <td onclick="event.stopPropagation()">${!nom?`<button class="btn sm primary" onclick="draftNomination('${d.id}')">Auto-draft</button>`:nom.status==='Draft Ready'?`<button class="btn sm primary" onclick="sendNomination('${nom.id}')">Review & send</button>`:nom.status==='Revision Required'?`<button class="btn sm danger" onclick="reviseNomination('${nom.id}')">Revise</button>`:'<span class="chip sm">✓</span>'}</td>
+    </tr>`;}).join('')}
+    </tbody></table></div>
+  </div>`;
+};
+function draftNomination(id){
+  const d=db.deliveries.find(x=>x.id===id);if(!d)return;
+  // validation gate
+  const checks=[['Assigned barge',!!d.barge],['Customer vessel',!!d.vessel],['Delivery window',!!d.start],['Product',!!d.product],['Quantity (est/inspected)',!!d.qty],['Loading location',true],['Inspection status',d.inspection!=='—'],['Required documentation',true],['Distribution list',true]];
+  const pass=checks.every(c=>c[1]);
+  openModal('Auto-generate Buffalo Marine Nomination — '+d.id,`
+    <div class="mini" style="margin-bottom:10px">Nomination engine validated the delivery against contract requirements:</div>
+    ${checks.map(([l,ok])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line-soft)"><span>${l}</span><span style="color:${ok?'var(--green)':'var(--amber)'}">${ok?'✓ pass':'⚠ check'}</span></div>`).join('')}
+    <div class="divider"></div>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="kv"><span class="k">Customer</span><span class="v">${d.custName}</span></div>
+      <div class="kv"><span class="k">Barge</span><span class="v">${d.barge}</span></div>
+      <div class="kv"><span class="k">Product</span><span class="v">${d.product}</span></div>
+      <div class="kv"><span class="k">Quantity</span><span class="v">${mt(d.qty)}</span></div>
+      <div class="kv"><span class="k">Window</span><span class="v">${fmtHM(d.start)}–${fmtHM(d.end)}</span></div>
+      <div class="kv"><span class="k">Operator</span><span class="v">${ROLES[state.role].name}</span></div>
+    </div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="confirmDraft('${d.id}')">${pass?'Generate draft':'Generate anyway'}</button>`);
+}
+function confirmDraft(id){
+  const d=db.deliveries.find(x=>x.id===id);
+  const nom={id:'BM-'+rint(4210,4299),delivery:d.id,status:'Draft Ready',created:state.now,barge:d.barge,customer:d.custName,vessel:d.vessel,product:d.product,qty:d.qty,window:d.start,revisions:0};
+  db.nominations.push(nom);d.nomination=nom.id;
+  closeModal();toast('Draft ready',nom.id+' generated — one-click review & send','ok');logAudit(ROLES[state.role].name,'drafted nomination '+nom.id);
+  if(state.view==='noms')go('noms');buildRail();
+}
+function sendNomination(id){const n=db.nominations.find(x=>x.id===id);n.status='Sent';toast('Nomination sent',n.id+' → Buffalo Marine · Outlook draft created · Teams notified','ok');logAudit(ROLES[state.role].name,'sent nomination '+n.id);setTimeout(()=>{n.status='Acknowledged';toast('Acknowledged',n.id+' acknowledged by Buffalo Marine','ok');if(state.view==='noms')go('noms');},3500);if(state.view==='noms')go('noms');buildRail();}
+function reviseNomination(id){const n=db.nominations.find(x=>x.id===id);n.status='Sent';n.revisions++;toast('Revised nomination sent',n.id+' rev '+n.revisions+' → Buffalo Marine · audit history maintained','ok');logAudit(ROLES[state.role].name,'sent revised nomination '+n.id);if(state.view==='noms')go('noms');buildRail();}
+
+/* =====================================================================
+   VIEW: AI DISPATCH ENGINE
+   ===================================================================== */
+VIEWS.dispatch=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>AI Dispatch Engine</h1><div class="sub">Continuous optimization — utilization, sequencing, reload timing, inventory, weather & congestion</div></div>
+    <div class="spacer"></div><span class="chip"><span class="dotp" style="background:var(--accent)"></span> Azure OpenAI · optimizing</span>
+    <button class="btn primary sm" onclick="runOptimizer()">⟳ Run optimization</button>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+    ${statCard('Fleet Utilization',pct(db.fleet.reduce((s,b)=>s+b.util,0)/db.fleet.length,1),'',{dir:'up',txt:'+8% w/ AI plan'})}
+    ${statCard('Predicted Conflicts',String(rint(1,3)),'next 48h',{dir:'down',txt:'2 resolved'})}
+    ${statCard('Idle Reduction',rnd(6,14).toFixed(1),'h/day',{dir:'up',txt:'if accepted'})}
+    ${statCard('Est. Savings',moneyK(rint(14000,22000)),'/day',{dir:'up',txt:'charter opt'})}
+  </div>
+  <div class="grid" style="grid-template-columns:1.3fr 1fr;margin-top:12px">
+    ${panel('Optimization Recommendations',db.fleet.filter(b=>b.util<80).slice(0,5).map(b=>{const save=rint(2100,6400);const util=rnd(4,11).toFixed(0);
+      return `<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)">
+        <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#22d3ee,#818cf8);display:grid;place-items:center;color:#04121a;font-weight:800">✦</div>
+        <div style="flex:1"><div class="hl" style="font-size:12px">Rebalance ${b.id} — assign next ${pick(['Bayport','Barbours Cut','Bolivar'])} stem</div>
+        <div class="mini">Idle ${b.idle.toFixed(0)}h → reduces idle ${rnd(1.5,4).toFixed(1)}h · utilization +${util}% · saves ${money(save)}/day · no conflicts introduced</div></div>
+        <button class="btn sm primary" onclick="toast('Accepted','${b.id} reassignment applied to schedule','ok');logAudit(ROLES[state.role].name,'accepted AI dispatch for ${b.id}')">Accept</button></div>`;
+    }).join(''),'<span class="chip sm">explainable AI</span>')}
+    ${panel('Conflict Prediction',`
+      ${[['Berth A congestion 13:00–16:00','HH-205 & HH-206 both queue','var(--amber)','Stagger reloads −1.4h wait'],['HOFTI MGO shortage in 11h','T-07 below min vs 3 nominations','var(--red)','Divert 2 MGO stems / expedite replenishment'],['Fog Bolivar Roads 04:00–09:00','2 transits delayed','var(--amber)','Resequence to daylight window']].map(([t,d,c,fix])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line-soft)"><div style="display:flex;gap:6px"><span class="dotp" style="background:${c};margin-top:5px"></span><div><div class="hl" style="font-size:11.5px">${t}</div><div class="mini">${d}</div><div class="mini" style="color:var(--accent)">✦ ${fix}</div></div></div></div>`).join('')}`)}
+  </div>
+  <div class="panel" style="margin-top:12px"><div class="panel-h"><h3>Optimization Inputs (live signals)</h3></div><div class="panel-b"><div class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px">
+    ${[['Fleet utilization','82.4%'],['Delivery sequence','19 today'],['Loading sequence','Berth A/B'],['Reload timing','optimized'],['Inventory positioning','balanced'],['Charter utilization','7/8 on-hire'],['Customer commitments','12 windows'],['Weather impact','fog +18m'],['Terminal congestion','queue 3']].map(([l,v])=>`<div class="stat"><div class="l">${l}</div><div class="v" style="font-size:14px">${v}</div></div>`).join('')}
+  </div></div></div>`;
+};
+function runOptimizer(){toast('Optimizer running','Evaluating 8 barges × 24 deliveries × weather & congestion…','');setTimeout(()=>toast('Optimization complete','Found plan: +8.4% utilization, −11.2h idle/day, $18,400/day savings. Review recommendations.','ok'),1800);}
+
+/* =====================================================================
+   VIEW: CHARTER OPTIMIZATION
+   ===================================================================== */
+VIEWS.charter=function(v){
+  const totCharter=db.fleet.reduce((s,b)=>s+b.charter,0);
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Charter Optimization</h1><div class="sub">Time-charter economics — utilization, idle cost, cost per MT & per delivery</div></div>
+    <div class="spacer"></div>${statChip('Fleet charter/day',money(totCharter))}${statChip('Idle cost/day',money(db.fleet.filter(b=>b.util<75).reduce((s,b)=>s+b.charter*(1-b.util/100),0)))}
+  </div>
+  <div class="panel">
+    <div class="panel-h"><h3>Charter Utilization & Economics</h3><div class="spacer"></div><span class="mini">click a barge for optimization detail</span></div>
+    <div style="overflow:auto"><table class="tbl click"><thead><tr>
+      <th>Barge</th><th>Charter/day</th><th>Utilization</th><th>Idle hrs</th><th>Idle cost/day</th><th>Cost/MT</th><th>Cost/delivery</th><th>Deadhead</th><th>Off-hire</th><th>Recommendation</th>
+    </tr></thead><tbody>
+    ${db.fleet.map(b=>{const idleCost=b.charter*(1-b.util/100);const dels=db.deliveries.filter(d=>d.barge===b.id).length||1;const costMT=b.charter/Math.max(b.onboard,100);const rec=b.util<70?'▲ Increase assignments':b.util>90?'✓ Optimal':'Rebalance spot';const rc=b.util<70?'var(--red)':b.util>90?'var(--green)':'var(--amber)';
+      return `<tr onclick='openBarge("${b.id}")'>
+      <td class="hl">${b.id}<div class="mini">${b.name}</div></td>
+      <td class="mono">${money(b.charter)}</td>
+      <td style="min-width:100px"><div class="mono">${pct(b.util,1)}</div>${barLine(b.util,b.util>75?'var(--green)':'var(--amber)',5)}</td>
+      <td class="mono ${b.idle>24?'down':''}">${b.idle.toFixed(1)}</td>
+      <td class="mono" style="color:var(--amber)">${money(idleCost)}</td>
+      <td class="mono">$${costMT.toFixed(2)}</td>
+      <td class="mono">${money(b.charter/dels)}</td>
+      <td class="mono">${rnd(.4,2.8).toFixed(1)}h</td>
+      <td>${b.offhire?'<span class="chip sm" style="color:var(--red)">off-hire</span>':'<span class="chip sm" style="color:var(--green)">on-hire</span>'}</td>
+      <td style="color:${rc};font-size:10.5px;font-weight:600">${rec}</td>
+    </tr>`;}).join('')}
+    </tbody></table></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+    ${panel('AI Charter Recommendations',`
+      <div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--green)">✦</span><div><div class="hl" style="font-size:11.5px">Re-deploy HH-207 & HH-208 to Bayport cluster</div><div class="mini">Raises utilization 61%→79%, recovers $9,200/day idle cost</div></div></div>
+      <div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--amber)">✦</span><div><div class="hl" style="font-size:11.5px">Consider off-hiring 1× 3,000 MT barge in Q3</div><div class="mini">Demand supports 7 barges at 88% vs 8 at 77% — $4,800/day charter saving</div></div></div>
+      <div style="display:flex;gap:9px;padding:8px 0"><span style="color:var(--cyan)">✦</span><div><div class="hl" style="font-size:11.5px">Reduce deadhead: load HH-205 en route to Barbours Cut</div><div class="mini">Cuts empty sailing 2.3h → +1 delivery/day capacity</div></div></div>`)}
+    ${panel('Utilization Distribution',db.fleet.map(b=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px"><span class="hl">${b.id} ${b.name}</span><span class="mono">${pct(b.util,0)}</span></div>${barLine(b.util,b.util<70?'var(--red)':b.util>88?'var(--green)':'var(--amber)',7)}</div>`).join(''))}
+  </div>`;
+};
+
+/* =====================================================================
+   VIEW: WEATHER & MARINE INTEL
+   ===================================================================== */
+VIEWS.weather=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Weather & Marine Intelligence</h1><div class="sub">AIS tracking · NOAA · channel restrictions — automatic operational risk detection</div></div>
+    <div class="spacer"></div><span class="chip" style="color:var(--amber)">2 active advisories</span>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+    ${[['Wind','14 kt SE','var(--green)','within limits'],['Visibility','0.4 nm','var(--red)','fog — Bolivar Roads'],['Channel current','2.8 kt flood','var(--amber)','transit +18min'],['Pilot delays','~35 min','var(--amber)','Galveston bar']].map(([l,val,c,s])=>`<div class="panel"><div class="panel-b"><div class="stat"><div class="l">${l}</div><div class="v" style="color:${c};font-size:18px">${val}</div><div class="mini">${s}</div></div></div></div>`).join('')}
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+    ${panel('Active Marine Advisories',`
+      ${[['crit','Dense Fog Advisory','Bolivar Roads / Galveston Bar','Visibility <0.5nm 04:00–09:00 CDT. Pilots restricting transits. 2 barge movements affected.'],['warn','Small Craft Advisory','Upper Galveston Bay','Winds 20–25kt gusting 30 after 18:00.'],['warn','Strong Flood Current','Houston Ship Channel','2.8kt flood 08:00–11:30, add 15–20min transit time.']].map(([sev,t,loc,d])=>{const c=sev==='crit'?'var(--red)':'var(--amber)';return `<div style="padding:9px 0;border-bottom:1px solid var(--line-soft)"><div style="display:flex;gap:8px"><span class="tag" style="background:${c}22;color:${c}">${sev.toUpperCase()}</span><b class="hl">${t}</b></div><div class="mini" style="margin:3px 0">${loc}</div><div style="font-size:11px;color:var(--txt-2)">${d}</div></div>`;}).join('')}`)}
+    ${panel('AIS — Affected Movements',`<table class="tbl"><thead><tr><th>Barge</th><th>Status</th><th>Route</th><th>Impact</th></tr></thead><tbody>
+      ${db.fleet.filter(b=>b.status.includes('Transit')).slice(0,6).map(b=>`<tr><td class="hl">${b.id}</td><td>${statusPill(b.status)}</td><td class="mini">${pick(BERTHS)} → HOFTI</td><td class="mono" style="color:var(--amber)">+${rint(12,32)}min</td></tr>`).join('')||'<tr><td colspan="4" class="mini">No barges in transit</td></tr>'}
+    </tbody></table><div class="divider"></div><div class="mini">Weather-adjusted ETAs auto-propagate to the scheduler & nomination windows. AI dispatch re-sequences daylight-only transits during the fog window.</div>`)}
+  </div>`;
+};
+
+/* =====================================================================
+   VIEW: PREDICTIVE ANALYTICS
+   ===================================================================== */
+VIEWS.analytics=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Predictive Analytics</h1><div class="sub">Forecasts — inventory shortages, delays, congestion, demurrage & bottlenecks</div></div>
+    <div class="spacer"></div><span class="chip"><span class="dotp" style="background:var(--accent)"></span> ML models · updated ${relTime(state.now-8*MIN)}</span>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+    ${[['Inventory Shortage','HOFTI T-07 MGO','var(--red)',82,'Forecast breach in ~11h. Replenish or reduce MGO nominations.'],['Delivery Delay','D-118 Front Altair','var(--amber)',58,'Fog + berth queue → 65min risk. Nomination window at risk.'],['Terminal Congestion','Berth A 13:00–16:00','var(--amber)',54,'3 barges queue. Stagger reloads to smooth.'],['HOFTI Replenishment','VLSFO cargo','var(--green)',22,'On schedule 17:00, +18,000 MT. Buffer restored.'],['Idle Barge Risk','HH-207 / HH-208','var(--amber)',61,'Utilization drift. Re-deploy to Bayport cluster.'],['Demurrage Exposure','Fleet-wide','var(--green)',12,'No exposure. Nearest risk D-118 with 65min buffer.']].map(([t,sub,c,p,d])=>`<div class="panel"><div class="panel-b">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="l" style="font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--txt-3)">${t}</div><div class="hl" style="font-size:13px;margin-top:2px">${sub}</div></div><div class="mono" style="color:${c};font-size:20px;font-weight:700">${p}%</div></div>
+      ${barLine(p,c,6)}<div class="mini" style="margin-top:7px">${d}</div>
+    </div></div>`).join('')}
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+    ${panel('72-Hour Enterprise Inventory Forecast',`<canvas id="anaProj" height="180" style="width:100%"></canvas>`)}
+    ${panel('Operational Bottleneck Forecast',`
+      ${[['HOFTI loading berths','78% capacity','var(--amber)',78],['Nomination processing','Nominal','var(--green)',34],['Barge availability','Tight 14:00–18:00','var(--amber)',66],['Inspection turnaround','Nominal','var(--green)',28],['Channel transit','Fog-constrained AM','var(--red)',72]].map(([t,s,c,p])=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:11px"><span class="hl">${t}</span><span style="color:${c}">${s}</span></div>${barLine(p,c,6)}</div>`).join('')}`)}
+  </div>`;
+  setTimeout(()=>{const s=ctxSetup('anaProj');if(!s)return;const d1=[],d2=[];let a=inv.physical,b=inv.commercialAvail;for(let i=0;i<=72;i++){a-=rnd(200,700);b-=rnd(180,650);if(i===9){a+=18000;b+=18000;}d1.push(Math.max(a,0));d2.push(Math.max(b,0));}lineSeries(s.x,s.w,s.h,[{data:d1,color:'#22d3ee',fill:true},{data:d2,color:'#34d399'}],{nowFrac:0});},60);
+};
+
+/* =====================================================================
+   VIEW: AUDIT
+   ===================================================================== */
+VIEWS.audit=function(v){
+  v.innerHTML=`
+  <div class="view-head"><div><h1>Audit & Activity Log</h1><div class="sub">Immutable enterprise audit trail — every action, who / what / when</div></div>
+    <div class="spacer"></div><span class="chip"><span class="dotp" style="background:var(--green)"></span> Entra ID · role-based · SIEM export</span>
+  </div>
+  <div class="panel"><div class="panel-h"><h3>Activity Stream</h3><div class="spacer"></div><span class="mini">${db.audit.length} entries</span></div>
+  <div style="overflow:auto"><table class="tbl"><thead><tr><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Source</th></tr></thead><tbody id="auditBody"></tbody></table></div></div>`;
+  renderAudit();
+};
+function renderAudit(){const b=$('#auditBody');if(!b)return;const sorted=[...db.audit].sort((a,c)=>c.t-a.t);b.innerHTML=sorted.map(a=>`<tr><td class="mono" style="font-size:10.5px">${fmtDay(a.t).slice(0,6)} ${fmtClock(a.t)}</td><td class="hl">${a.who}</td><td><span class="chip sm">${a.role}</span></td><td>${a.act}</td><td class="mini">Harbormaster</td></tr>`).join('');}
+function logAudit(who,act){db.audit.unshift({id:uid('au'),who,role:ROLES[state.role].name,act,t:state.now});if(db.audit.length>60)db.audit.pop();if(state.view==='audit')renderAudit();}
+</script>
+
+<script>
+/* =====================================================================
+   COPILOT — natural language ops assistant
+   ===================================================================== */
+const Copilot={
+  history:[],
+  toggle(){const c=$('#copilot');c.classList.toggle('show');if(c.classList.contains('show')){if(!this.history.length)this.greet();$('#cpInput').focus();}},
+  open(){if(!$('#copilot').classList.contains('show'))this.toggle();},
+  greet(){this.add('a',`Hello — I'm your Harbormaster Copilot, grounded on live operations data. Ask me to move deliveries, surface idle barges, check inventory, or summarize the day.`);this.chips();},
+  chips(){const chips=['Show idle barges','Show available floating inventory','Show inventory by product','Can we accept another bunker stem?','Summarize today\'s operations','Show today\'s charter cost','Explain today\'s delays'];$('#cpChips').innerHTML=chips.map(c=>`<span class="chip" onclick="Copilot.ask('${c.replace(/'/g,"\\'")}')">${c}</span>`).join('');},
+  add(role,html){this.history.push({role,html});const b=$('#cpBody');b.append(el('div',{class:'cp-msg '+role,html}));b.scrollTop=b.scrollHeight;},
+  ask(q){this.open();$('#cpInput').value=q;this.send();},
+  send(){const inp=$('#cpInput');const q=inp.value.trim();if(!q)return;inp.value='';this.add('u',q);setTimeout(()=>this.add('a',this.answer(q)),350);},
+  answer(q){
+    const s=q.toLowerCase();
+    if(/idle/.test(s)){const idle=db.fleet.filter(b=>b.idle>18).sort((a,b)=>b.idle-a.idle);return `<b>${idle.length} idle barges</b> (>18h):<br>`+idle.map(b=>`• <b>${b.id} ${b.name}</b> — ${b.idle.toFixed(0)}h idle, util ${pct(b.util,0)}, ${money(b.charter*(1-b.util/100))}/day idle cost`).join('<br>')+`<br><br>✦ Reassigning the next Bayport stem to ${idle[0].id} would cut idle ~3.1h and lift fleet utilization ~8%.`;}
+    if(/floating|onboard/.test(s)){return `<b>Floating inventory: ${mt(inv.floating)}</b> across ${db.fleet.length} barges.<br>`+inv.byProd.filter(p=>p.floating>0).map(p=>`• ${p.p}: ${mt(p.floating)}`).join('<br>')+`<br><br>Commercial-available afloat (net of commitments): <b>${mt(Math.max(0,inv.floating-db.fleet.reduce((a,b)=>a+b.committed,0)))}</b>.`;}
+    if(/inventory by product|by product/.test(s)){return `<b>Enterprise inventory by product:</b><br>`+inv.byProd.map(p=>`• ${p.p}: <b>${mt(p.total)}</b> (HOFTI ${fmt(p.hofti)} · floating ${fmt(p.floating)})`).join('<br>');}
+    if(/accept.*stem|another.*stem|can we accept/.test(s)){const av=inv.commercialAvail;const can=av>2000;return `${can?'✅ <b>Yes</b>':'⚠️ <b>Tight</b>'} — commercial-available inventory is <b>${mt(av)}</b>. `+(can?`You can accept a stem up to ~${mt(Math.floor(av*.8/100)*100)} without disturbing committed deliveries. Nearest free barge: ${db.fleet.filter(b=>b.util<80)[0]?.id||'—'}.`:`Only ${mt(av)} uncommitted; would need to expedite HOFTI replenishment (VLSFO cargo ETA ${fmtHM(state.now+9*HOUR)}) first.`);}
+    if(/charter cost|charter/.test(s)){const tot=db.fleet.reduce((a,b)=>a+b.charter,0);const idle=db.fleet.filter(b=>b.util<75).reduce((a,b)=>a+b.charter*(1-b.util/100),0);return `<b>Today's charter cost:</b> ${money(tot)}/day fleet-wide.<br>Idle charter cost: <b style="color:var(--red)">${money(idle)}/day</b>.<br>Blended cost/MT afloat: $${(tot/Math.max(inv.floating,1)*1000).toFixed(2)}/kMT.<br><br>✦ Charter optimizer projects $18,400/day savings by re-deploying HH-207 & HH-208.`;}
+    if(/delay|late/.test(s)){return `<b>Today's delays & risks:</b><br>• Fog at Bolivar Roads (04:00–09:00) — 2 transits +18min<br>• Berth A congestion 13:00–16:00 — 3 barges queued<br>• D-118 (Front Altair) nomination window at risk (~65min buffer)<br><br>✦ AI dispatch has re-sequenced fog-window transits to daylight and staggered Berth A reloads.`;}
+    if(/summar/.test(s)){const del=db.deliveries.filter(d=>d.end>state.now&&d.start<state.now+DAY).length;return `<b>Operations summary — ${fmtDay(state.now)}:</b><br>• Fleet utilization <b>${pct(db.fleet.reduce((a,b)=>a+b.util,0)/db.fleet.length,1)}</b> (${db.fleet.filter(b=>!b.offhire).length}/8 on-hire)<br>• <b>${del}</b> deliveries in flight · enterprise inventory <b>${fmt(inv.physical/1000,1)}kMT</b><br>• Commercial-available <b>${mt(inv.commercialAvail)}</b> · ${db.nominations.filter(n=>n.status==='Draft Ready').length} nomination drafts ready<br>• Top risk: HOFTI T-07 MGO below minimum<br>• No demurrage exposure.`;}
+    const m=s.match(/move\s+(?:delivery\s+)?(d-?\d+)\s+to\s+(?:barge\s+)?(hh-?\d+|\d+)/i);
+    if(m){const did=m[1].toUpperCase().replace('D','D-').replace('D--','D-');const d=db.deliveries.find(x=>x.id.toLowerCase()===m[1].toLowerCase()||x.id.toLowerCase()==='d-'+m[1].replace(/\D/g,''));let bid=m[2].toUpperCase();if(!bid.startsWith('HH'))bid='HH-20'+bid.replace(/\D/g,'');const b=db.fleet.find(x=>x.id===bid||x.id.endsWith(m[2].replace(/\D/g,'')));if(d&&b){pushUndo({id:d.id,start:d.start,end:d.end,barge:d.barge});const from=d.barge;d.barge=b.id;recomputeAll();if(state.view==='sched')buildSched();logAudit('Copilot','moved '+d.id+' to '+b.id);return `✅ Moved <b>${d.id}</b> (${d.custName}) from ${from} to <b>${b.id} ${b.name}</b>. Transit, loading & inventory recalculated · nomination re-validated · schedule marked unpublished. Idle −${rnd(1,3).toFixed(1)}h.`;}return `I couldn't match that delivery/barge. Try e.g. "Move D-112 to HH-206".`;}
+    if(/assign next|next delivery/.test(s)){const b=db.fleet.filter(x=>x.util<80).sort((a,c)=>a.util-c.util)[0];return `✦ Next unassigned stem is best placed on <b>${b.id} ${b.name}</b> (util ${pct(b.util,0)}, ${b.idle.toFixed(0)}h idle). This minimizes deadhead and lifts utilization ~${rnd(4,9).toFixed(0)}%. Shall I schedule it? (open Scheduler to confirm)`;}
+    return `I can help with fleet, scheduling, inventory, nominations, charter economics and risk. Try: "Show idle barges", "Move D-112 to HH-206", "Can we accept another bunker stem?", or "Summarize today's operations".`;
+  }
+};
+
+/* =====================================================================
+   COMMAND PALETTE
+   ===================================================================== */
+const Palette={
+  items:[],sel:0,
+  build(){this.items=[
+    ...NAV.filter(n=>!n.sep).map(n=>({t:n.title,s:'Module',ic:'▤',act:()=>go(n.id)})),
+    ...db.fleet.map(b=>({t:`${b.id} ${b.name}`,s:'Barge · '+b.status,ic:'⛴',act:()=>{go('fleet');openBarge(b.id);}})),
+    {t:'Publish schedule',s:'Command',ic:'⤴',act:()=>{go('sched');publishSchedule();}},
+    {t:'Run AI optimization',s:'Command',ic:'✦',act:()=>{go('dispatch');runOptimizer();}},
+    {t:'Open AI Copilot',s:'Command',ic:'✦',act:()=>Copilot.open()},
+    {t:'Switch workspace / role',s:'Command',ic:'◑',act:()=>RolePicker.open()},
+    {t:'Show alerts',s:'Command',ic:'🔔',act:()=>showAlerts()},
+  ];},
+  open(){this.build();$('#palette').classList.add('show');$('#palInput').value='';this.sel=0;this.filter();$('#palInput').focus();},
+  close(){$('#palette').classList.remove('show');},
+  filter(){const q=$('#palInput').value.toLowerCase();const res=this.items.filter(i=>i.t.toLowerCase().includes(q)||i.s.toLowerCase().includes(q)).slice(0,9);this.res=res;this.sel=clamp(this.sel,0,Math.max(0,res.length-1));$('#palList').innerHTML=res.map((i,idx)=>`<div class="pal-item ${idx===this.sel?'sel':''}" onclick="Palette.run(${idx})"><div class="pi-ic">${i.ic}</div><div><div class="pi-t">${i.t}</div><div class="pi-s">${i.s}</div></div>${idx===this.sel?'<kbd>↵</kbd>':''}</div>`).join('')||'<div class="pal-item"><div class="pi-s" style="padding:6px">No results</div></div>';},
+  key(e){if(e.key==='ArrowDown'){e.preventDefault();this.sel=Math.min(this.sel+1,(this.res||[]).length-1);this.filter();}else if(e.key==='ArrowUp'){e.preventDefault();this.sel=Math.max(this.sel-1,0);this.filter();}else if(e.key==='Enter'){this.run(this.sel);}else if(e.key==='Escape'){this.close();}},
+  run(idx){const i=(this.res||[])[idx];if(i){this.close();i.act();}}
+};
+
+/* =====================================================================
+   SIMULATION + LIVE REFRESH
+   ===================================================================== */
+function simTick(){
+  state.tick++;
+  // nudge barges
+  db.fleet.forEach(b=>{
+    b.util=clamp(b.util+rnd(-.6,.6),52,97);
+    b.risk=clamp(b.risk+rint(-3,3),5,88);
+    if(Math.random()<.10){const i=STATUSES.indexOf(b.status);b.status=STATUSES[(i+1)%STATUSES.length];}
+    if(Math.random()<.14){const delta=rint(-120,60);b.onboard=clamp(b.onboard+delta,b.heel,b.cap);
+      // ledger movement
+      if(!db._ledger)db._ledger=[];
+      if(delta<-20){db._ledger.unshift({t:state.now,type:'Delivery',p:b.product,d:delta,loc:b.id+' → customer',fresh:true});}
+    }
+  });
+  // tank drift + occasional load
+  db.tanks.forEach(t=>{t.cur=clamp(t.cur+rnd(-300,120),t.min*.6,t.cap);});
+  if(Math.random()<.5){const t=pick(db.tanks);const amt=-rint(200,700);t.cur=clamp(t.cur+amt,t.min*.6,t.cap);if(!db._ledger)db._ledger=[];db._ledger.unshift({t:state.now,type:'Load',p:t.product,d:amt,loc:'HOFTI '+t.id+' → barge',fresh:true});}
+  if(db._ledger&&db._ledger.length>40)db._ledger.length=40;
+  recomputeAll();
+}
+function liveRefresh(){
+  updateTopKpis();
+  // status bar
+  $('#sbFleet').textContent=db.fleet.length;
+  $('#sbDel').textContent=db.deliveries.filter(d=>d.end>state.now&&d.start<state.now+DAY).length;
+  $('#sbHofti').textContent=fmt(inv.hofti);
+  $('#sbFloat').textContent=fmt(inv.floating);
+  // live views
+  if(state.view==='exec')updateExecKpis();
+  if(state.view==='fleet')renderFleetBody();
+  if(state.view==='inv'){updateInvDims();updateLedger();}
+  if(state.view==='sched')detectConflicts(false);
+  updateAlertDot();
+}
+
+/* =====================================================================
+   KEYBOARD SHORTCUTS
+   ===================================================================== */
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();Palette.open();return;}
+  if(e.key==='Escape'){Palette.close();closeModal();if($('#copilot').classList.contains('show'))Copilot.toggle();closeDrawer();}
+  if(document.activeElement.tagName==='INPUT')return;
+  const map={'1':'exec','2':'fleet','3':'sched','4':'hofti','5':'float','6':'inv','7':'blender','8':'noms','9':'dispatch'};
+  if(map[e.key])go(map[e.key]);
+  if(e.key.toLowerCase()==='c')Copilot.toggle();
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){if(state.view==='sched'){e.preventDefault();schedUndo();}}
+});
+
+/* redraw current view (re-fits canvases & scheduler track) on resize/rotate */
+let _rzT; window.addEventListener('resize',()=>{clearTimeout(_rzT);_rzT=setTimeout(()=>go(state.view),250);});
+
+/* ===================== GO LIVE ===================== */
+boot();
+</script>
+</body>
+</html>
