@@ -22,6 +22,7 @@ export type ModuleId =
 
 export default function App() {
   const [module, setModule] = useState<ModuleId>('scheduler');
+  const [commandOpen, setCommandOpen] = useState(false);
   const modal = useFleetStore((s) => s.modal);
   const editingStemId = useFleetStore((s) => s.editingStemId);
   const setClock = useFleetStore((s) => s.setClock);
@@ -34,10 +35,17 @@ export default function App() {
   }, [setClock]);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-panel-900 text-slate-200">
-      <AppHeader active={module} onNavigate={setModule} />
+    <div className="flex h-dvh flex-col overflow-hidden bg-panel-900 text-slate-200">
+      <AppHeader
+        active={module}
+        onNavigate={(m) => {
+          setModule(m);
+          setCommandOpen(false);
+        }}
+        onToggleCommand={() => setCommandOpen((v) => !v)}
+      />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 flex-col">
           {module === 'scheduler' && <SchedulerModule />}
           {module === 'optimization' && <OptimizationView />}
@@ -47,7 +55,16 @@ export default function App() {
           {module === 'analytics' && <AnalyticsView />}
         </main>
 
-        <CommandCenter />
+        {/* Mobile backdrop when the command drawer is open */}
+        {commandOpen && (
+          <button
+            aria-label="Close command center"
+            className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+            onClick={() => setCommandOpen(false)}
+          />
+        )}
+
+        <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} />
       </div>
 
       {modal && <StemModal key={`${modal}:${editingStemId ?? 'new'}`} />}

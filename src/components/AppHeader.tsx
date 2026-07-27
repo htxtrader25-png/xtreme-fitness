@@ -3,6 +3,7 @@ import {
   Anchor,
   Download,
   FlaskConical,
+  PanelRightOpen,
   RotateCcw,
   Sparkles,
   Upload,
@@ -18,9 +19,11 @@ import type { ModuleId } from '@/App';
 export function AppHeader({
   active,
   onNavigate,
+  onToggleCommand,
 }: {
   active: ModuleId;
   onNavigate: (m: ModuleId) => void;
+  onToggleCommand: () => void;
 }) {
   const { kpis, now, plan } = useDerived();
   const isScenario = useFleetStore((s) => s.activeScenarioId !== null);
@@ -52,16 +55,17 @@ export function AppHeader({
 
   return (
     <header className="flex flex-col border-b border-panel-600 bg-panel-900">
-      <div className="flex items-center gap-4 px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/15">
+      <div className="flex items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/15">
             <Anchor size={18} className="text-accent" />
           </div>
-          <div>
-            <h1 className="text-sm font-bold leading-tight text-slate-100">
-              Houston Bunker Fleet Scheduler
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-bold leading-tight text-slate-100">
+              <span className="sm:hidden">Bunker Scheduler</span>
+              <span className="hidden sm:inline">Houston Bunker Fleet Scheduler</span>
             </h1>
-            <p className="text-[11px] leading-tight text-slate-500">
+            <p className="hidden text-[11px] leading-tight text-slate-500 sm:block">
               Operational command center
             </p>
           </div>
@@ -70,11 +74,11 @@ export function AppHeader({
         {isScenario && (
           <button
             onClick={exitScenario}
-            className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-950/40 px-2.5 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-900/40"
+            className="flex max-w-[38vw] shrink items-center gap-1.5 truncate rounded-full border border-amber-500/40 bg-amber-950/40 px-2.5 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-900/40"
             title="You are editing a scenario. Click to return to the live plan."
           >
-            <FlaskConical size={12} />
-            Scenario: {scenarioName ?? 'draft'} · exit
+            <FlaskConical size={12} className="shrink-0" />
+            <span className="truncate">Scenario: {scenarioName ?? 'draft'} · exit</span>
           </button>
         )}
 
@@ -92,26 +96,14 @@ export function AppHeader({
 
         <div className="flex-1" />
 
-        <WeatherWidget compact />
+        <div className="hidden sm:flex">
+          <WeatherWidget compact />
+        </div>
         <div className="hidden font-mono text-xs text-slate-400 md:block">
           {fmtDateTime(now)}
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
-            className="btn-ghost !px-2"
-            title="Export plan (JSON)"
-            onClick={() => downloadPlan(plan, now.toISOString())}
-          >
-            <Download size={15} />
-          </button>
-          <button
-            className="btn-ghost !px-2"
-            title="Import plan (JSON)"
-            onClick={() => fileRef.current?.click()}
-          >
-            <Upload size={15} />
-          </button>
           <input
             ref={fileRef}
             type="file"
@@ -119,28 +111,63 @@ export function AppHeader({
             className="hidden"
             onChange={onImport}
           />
+          {/* Advanced data actions — hidden on the smallest screens */}
+          <div className="hidden items-center gap-1.5 sm:flex">
+            <button
+              className="btn-ghost !px-2"
+              title="Export plan (JSON)"
+              onClick={() => downloadPlan(plan, now.toISOString())}
+            >
+              <Download size={15} />
+            </button>
+            <button
+              className="btn-ghost !px-2"
+              title="Import plan (JSON)"
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload size={15} />
+            </button>
+            <button
+              className="btn-ghost !px-2"
+              title="Reset to demo plan"
+              onClick={() => {
+                if (confirm('Reset the plan and all scenarios to the demo seed?')) resetToSeed();
+              }}
+            >
+              <RotateCcw size={15} />
+            </button>
+          </div>
           <button
-            className="btn-ghost !px-2"
-            title="Reset to demo plan"
-            onClick={() => {
-              if (confirm('Reset the plan and all scenarios to the demo seed?')) resetToSeed();
-            }}
+            className="btn-primary text-xs"
+            onClick={() => openNewStem()}
+            title="New Stem"
           >
-            <RotateCcw size={15} />
+            <Sparkles size={14} />
+            <span className="hidden sm:inline">New Stem</span>
           </button>
-          <button className="btn-primary text-xs" onClick={() => openNewStem()}>
-            <Sparkles size={14} /> New Stem
+          {/* Command Center drawer toggle (mobile/tablet only) */}
+          <button
+            className="btn-ghost relative !px-2 lg:hidden"
+            title="Command Center"
+            onClick={onToggleCommand}
+          >
+            <PanelRightOpen size={16} />
+            {kpis.conflictCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                {kpis.conflictCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
 
       {/* Module nav */}
-      <nav className="flex items-center gap-1 px-3">
+      <nav className="flex items-center gap-1 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {MODULES.map((m) => (
           <button
             key={m.id}
             onClick={() => onNavigate(m.id)}
-            className={`relative px-3 py-2 text-sm font-medium transition-colors ${
+            className={`relative shrink-0 px-3 py-2 text-sm font-medium transition-colors ${
               active === m.id
                 ? 'text-accent'
                 : 'text-slate-400 hover:text-slate-200'

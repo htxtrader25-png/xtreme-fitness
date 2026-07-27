@@ -7,6 +7,7 @@ import {
   Gauge as GaugeIcon,
   Ship,
   Target,
+  X,
 } from 'lucide-react';
 import { useFleetStore } from '@/store/useFleetStore';
 import { useDerived } from '@/store/useDerived';
@@ -26,7 +27,13 @@ import { ACTIVITY_COLORS } from '@/lib/constants';
 import { fmtDuration, fmtTime, hoursBetween } from '@/lib/time';
 import type { Recommendation } from '@/types';
 
-export function CommandCenter() {
+export function CommandCenter({
+  open = false,
+  onClose,
+}: {
+  open?: boolean;
+  onClose?: () => void;
+}) {
   const { snapshot, conflicts, recommendations, kpis, utilization, now, plan } =
     useDerived();
   const selectedStemId = useFleetStore((s) => s.selectedStemId);
@@ -55,13 +62,24 @@ export function CommandCenter() {
   };
 
   return (
-    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-panel-600 bg-panel-900">
+    <aside
+      className={`fixed inset-y-0 right-0 z-40 flex h-full w-[86%] max-w-sm shrink-0 transform flex-col border-l border-panel-600 bg-panel-900 shadow-2xl transition-transform duration-200 lg:static lg:z-0 lg:w-[340px] lg:max-w-none lg:translate-x-0 lg:shadow-none ${
+        open ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+      }`}
+    >
       <div className="flex items-center gap-2 border-b border-panel-600 px-4 py-3">
         <Target size={18} className="text-accent" />
         <div>
           <h2 className="text-sm font-semibold text-slate-100">Command Center</h2>
           <p className="text-[11px] text-slate-500">Live operational status</p>
         </div>
+        <button
+          className="ml-auto rounded-md p-1 text-slate-400 hover:bg-panel-700 hover:text-slate-200 lg:hidden"
+          onClick={onClose}
+          aria-label="Close command center"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">

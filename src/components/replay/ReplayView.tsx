@@ -69,7 +69,7 @@ export function ReplayView() {
         </div>
 
         {/* Transport controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             className="btn-ghost"
             onClick={() => {
@@ -95,7 +95,7 @@ export function ReplayView() {
             step={60_000}
             value={replay.atMs}
             onChange={(e) => setReplayTime(Number(e.target.value))}
-            className="h-1.5 flex-1 cursor-pointer accent-sky-400"
+            className="h-1.5 min-w-[140px] flex-1 cursor-pointer accent-sky-400"
           />
 
           <div className="flex rounded-md border border-panel-600 bg-panel-900 p-0.5">
