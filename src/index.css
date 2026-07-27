@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #0b1220;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin scrollbars for panels */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   DayPilot Scheduler dark theme.
+   The Lite Scheduler renders with light defaults; these overrides align it to
+   the command-center dark palette. Scoped to .dp-dark wrapper.
+   -------------------------------------------------------------------------- */
+.dp-dark .scheduler_default_main,
+.dp-dark .scheduler_default_corner_inner {
+  border-color: #1f2c47 !important;
+  font-family: inherit !important;
+  color: #cbd5e1;
+}
+.dp-dark .scheduler_default_corner_inner {
+  background: #111a2e !important;
+}
+.dp-dark .scheduler_default_rowheader_inner,
+.dp-dark .scheduler_default_rowheader {
+  background: #111a2e !important;
+  color: #e2e8f0 !important;
+  border-color: #1f2c47 !important;
+  font-weight: 600;
+}
+.dp-dark .scheduler_default_timeheadergroup_inner,
+.dp-dark .scheduler_default_timeheadercol_inner {
+  background: #0e1626 !important;
+  color: #94a3b8 !important;
+  border-color: #1f2c47 !important;
+}
+.dp-dark .scheduler_default_cell {
+  background: #0b1220 !important;
+  border-color: #17223a !important;
+}
+.dp-dark .scheduler_default_cell.scheduler_default_cell_business {
+  background: #0e1729 !important;
+}
+.dp-dark .scheduler_default_matrix_vertical_line,
+.dp-dark .scheduler_default_matrix_horizontal_line {
+  border-color: #17223a !important;
+}
+.dp-dark .scheduler_default_event_inner {
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.dp-dark .scheduler_default_shadow_inner {
+  background: rgba(56, 189, 248, 0.25) !important;
+  border-radius: 6px;
+}
+.dp-dark .scheduler_default_event_moving_source {
+  opacity: 0.4;
+}
+.dp-dark .scheduler_default_selected .scheduler_default_event_inner {
+  box-shadow: inset 0 0 0 2px #38bdf8, 0 0 0 2px rgba(56, 189, 248, 0.4);
+}
+/* Current-time cell marker (set via onBeforeCellRender) */
+.dp-dark .dp-now-cell {
+  box-shadow: inset 2px 0 0 0 #f43f5e;
+}
+/* Conflict highlight */
+.dp-dark .dp-conflict .scheduler_default_event_inner {
+  box-shadow: inset 0 0 0 2px #f43f5e, 0 0 8px rgba(244, 63, 94, 0.5) !important;
+}
+/* Selected stem's activities */
+.dp-dark .dp-selected-stem .scheduler_default_event_inner {
+  box-shadow: inset 0 0 0 2px #38bdf8 !important;
+}
+/* Recommendation focus pulse */
+.dp-dark .dp-focused .scheduler_default_event_inner {
+  box-shadow: inset 0 0 0 2px #fbbf24, 0 0 10px rgba(251, 191, 36, 0.6) !important;
+}
+/* Search-dimmed events */
+.dp-dark .dp-dimmed .scheduler_default_event_inner {
+  opacity: 0.35;
+}
+/* Maintenance block striping */
+.dp-dark .dp-maintenance .scheduler_default_event_inner {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 6px,
+    rgba(0, 0, 0, 0.25) 6px,
+    rgba(0, 0, 0, 0.25) 12px
+  );
+  font-size: 11px;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg border border-panel-600 bg-panel-800;
+  }
+  .panel-header {
+    @apply flex items-center justify-between px-3 py-2 border-b border-panel-600 text-xs font-semibold uppercase tracking-wide text-slate-400;
+  }
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-panel-900 hover:bg-sky-400;
+  }
+  .btn-ghost {
+    @apply btn bg-panel-700 text-slate-200 hover:bg-panel-600;
+  }
+  .btn-danger {
+    @apply btn bg-rose-600 text-white hover:bg-rose-500;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium;
+  }
+  .field-label {
+    @apply block text-xs font-medium text-slate-400 mb-1;
+  }
+  .input {
+    @apply w-full rounded-md border border-panel-600 bg-panel-900 px-2.5 py-1.5 text-sm text-slate-100 outline-none focus:border-accent focus:ring-1 focus:ring-accent;
+  }
+}
